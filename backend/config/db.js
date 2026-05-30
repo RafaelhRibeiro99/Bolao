@@ -540,6 +540,13 @@ const pgConfig = process.env.DATABASE_URL
     port: Number(process.env.DB_PORT || 5432),
   };
 
+if (!process.env.DATABASE_URL) {
+  const missing = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'].filter((key) => !process.env[key]);
+  if (missing.length) {
+    console.error(`Configuracao do banco incompleta. Variaveis faltando: ${missing.join(', ')}`);
+  }
+}
+
 if (process.env.DB_SSL === 'true' || process.env.DATABASE_URL) {
   pgConfig.ssl = { rejectUnauthorized: false };
 }
