@@ -16,6 +16,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api', userRoutes);
 app.use('/api/admin', adminRoutes);
 
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true });
+});
+
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });

@@ -530,12 +530,22 @@ if (process.env.USE_MEMORY_DB === 'true') {
   return;
 }
 
+const pgConfig = process.env.DATABASE_URL
+  ? { connectionString: process.env.DATABASE_URL }
+  : {
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: Number(process.env.DB_PORT || 5432),
+  };
+
+if (process.env.DB_SSL === 'true' || process.env.DATABASE_URL) {
+  pgConfig.ssl = { rejectUnauthorized: false };
+}
+
 const pgPool = new Pool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: Number(process.env.DB_PORT || 5432),
+  ...pgConfig,
   max: 5,
 });
 

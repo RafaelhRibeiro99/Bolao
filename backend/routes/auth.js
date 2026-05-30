@@ -56,6 +56,7 @@ router.post('/cadastro', async (req, res) => {
     }
     res.status(201).json({ message: 'Cadastro criado. Agora você pode acessar a plataforma.' });
   } catch (error) {
+    console.error('Erro ao cadastrar usuario:', error.message || error);
     res.status(500).json({ message: 'Erro ao cadastrar usuário.' });
   } finally {
     if (conn) conn.release();
@@ -96,6 +97,7 @@ router.post('/login', async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('Erro ao fazer login:', error.message || error);
     res.status(500).json({ message: 'Erro ao fazer login.' });
   } finally {
     if (conn) conn.release();
