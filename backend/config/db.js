@@ -554,9 +554,29 @@ if (process.env.DB_SSL === 'true' || process.env.DATABASE_URL) {
 const pgPool = new Pool({
   ...pgConfig,
   max: 5,
+  connectionTimeoutMillis: 10000,
 });
 
+function getDatabaseDiagnostics() {
+  const required = process.env.DATABASE_URL
+    ? []
+    : ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'].filter((key) => !process.env[key]);
+
+  return {
+    useMemoryDb: process.env.USE_MEMORY_DB === 'true',
+    hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
+    dbHost: process.env.DB_HOST ? 'configurado' : 'faltando',
+    dbPort: process.env.DB_PORT || '5432',
+    dbUser: process.env.DB_USER ? 'configurado' : 'faltando',
+    dbPassword: process.env.DB_PASSWORD ? 'configurado' : 'faltando',
+    dbName: process.env.DB_NAME ? 'configurado' : 'faltando',
+    dbSsl: process.env.DB_SSL === 'true' || Boolean(process.env.DATABASE_URL),
+    missing: required,
+  };
+}
+
 module.exports = {
+  diagnostics: getDatabaseDiagnostics,
   async getConnection() {
     const client = await pgPool.connect();
     return {

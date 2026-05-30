@@ -22,16 +22,20 @@ app.get('/api/health', (_req, res) => {
 
 app.get('/api/health/db', async (_req, res) => {
   let conn;
+  const db = require('./config/db');
   try {
-    conn = await require('./config/db').getConnection();
+    conn = await db.getConnection();
     await conn.query('SELECT 1 AS ok');
-    res.json({ ok: true, database: true });
+    res.json({ ok: true, database: true, config: db.diagnostics ? db.diagnostics() : {} });
   } catch (error) {
-    console.error('Erro no health check do banco:', error.message || error);
+    const message = error?.message || String(error) || 'Erro ao conectar no banco.';
+    console.error('Erro no health check do banco:', message);
     res.status(500).json({
       ok: false,
       database: false,
-      message: error.message || 'Erro ao conectar no banco.',
+      message,
+      code: error?.code || null,
+      config: db.diagnostics ? db.diagnostics() : {},
     });
   } finally {
     if (conn) conn.release();
