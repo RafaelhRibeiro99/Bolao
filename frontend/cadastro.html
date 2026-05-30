@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro | Bolão Copa 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .auth-card-expanded {
+      max-width: 100%;
+      width: 100%;
+    }
+    .cadastro-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+    .cadastro-form {
+      flex: 1;
+    }
+    .regras-container {
+      background: rgba(255,255,255,.035);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 14px;
+      padding: 20px;
+      max-height: 650px;
+      overflow-y: auto;
+    }
+    .regras-container h2 {
+      color: #e2e8f0;
+      margin-top: 0;
+      font-size: 16px;
+      border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      font-weight: 700;
+    }
+    .regras-container h3 {
+      color: #cbd5e1;
+      font-size: 14px;
+      margin: 12px 0 6px 0;
+      font-weight: 700;
+    }
+    .regras-container p {
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 0 0 8px 0;
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+    .regras-destaque {
+      background: rgba(250, 204, 21, 0.1);
+      border-left: 3px solid rgba(250, 204, 21, 0.3);
+      padding: 8px;
+      margin: 8px 0;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #fde68a;
+    }
+    .password-strength {
+      display: none;
+      margin-top: 8px;
+    }
+    .strength-bar {
+      height: 6px;
+      background: #444;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 5px;
+    }
+    .strength-indicator {
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s, background-color 0.3s;
+      background-color: #dc2626;
+    }
+    .strength-text {
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+    .strength-text.weak { color: #dc2626; }
+    .strength-text.fair { color: #f59e0b; }
+    .strength-text.good { color: #3b82f6; }
+    .strength-text.strong { color: #16a34a; }
+    .email-feedback {
+      font-size: 12px;
+      margin-top: 5px;
+      display: none;
+    }
+    .email-feedback.checking { color: #3b82f6; }
+    .email-feedback.available { color: #16a34a; }
+    .email-feedback.taken { color: #dc2626; }
+    @media (max-width: 1024px) {
+      .cadastro-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      .regras-container {
+        max-height: 400px;
+      }
+    }
+    @media (max-width: 720px) {
+      .regras-container {
+        max-height: calc(100vh - 260px);
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a class="brand" href="/index.html"><span class="brand-mark"><img src="assets/trophy-login.png" alt="Taça Premium da Copa do Mundo"></span> Bolão Copa 2026</a>
+      <div class="nav-menu">
+        <a href="/index.html">Início</a>
+        <a class="btn btn-primary" href="/login.html">Entrar</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container auth-layout">
+    <section class="auth-card auth-card-expanded">
+      <div class="cadastro-grid">
+        <div class="cadastro-form">
+          <h1>🚀 Criar conta</h1>
+          <p class="text-muted">Após o cadastro, você pode acessar a plataforma e começar a participar do bolão.</p>
+          <form id="formCadastro">
+            <label>Nome<input id="nome" placeholder="Seu nome" required></label>
+            <label>E-mail<input id="email" type="email" placeholder="seu@email.com" required></label>
+            <div id="emailFeedback" class="email-feedback"></div>
+            <label>WhatsApp<input id="whatsapp" placeholder="(00) 00000-0000"></label>
+            <label>Senha<input id="senha" type="password" placeholder="Crie uma senha" required></label>
+            <div class="password-strength" id="passwordStrength">
+              <div class="strength-bar">
+                <div class="strength-indicator" id="strengthIndicator"></div>
+              </div>
+              <div class="strength-text" id="strengthText">Digite uma senha segura</div>
+            </div>
+            <label>Confirmar senha<input id="senhaConfirm" type="password" placeholder="Repita a mesma senha" required></label>
+            <label class="checkbox-line"><input id="termos" type="checkbox" required> Li e aceito as regras do Bolão Copa 2026</label>
+            <button class="primary">Criar conta</button>
+          </form>
+          <div id="mensagem"></div>
+        </div>
+
+        <div class="regras-container">
+          <h2>📋 REGRAS COMPLETAS DO BOLÃO</h2>
+
+          <h3>💰 Valor do Palpite</h3>
+          <p>Cada palpite realizado possui o valor de R$ 5,00.</p>
+
+          <h3>🔁 Quantidade de Palpites</h3>
+          <p>Cada usuário pode realizar quantos palpites desejar em uma mesma partida. Exemplos: Brasil 2x1, Brasil 3x0, Brasil 1x1.</p>
+
+          <h3>✅ Validação do Palpite</h3>
+          <p>O palpite somente será considerado válido após a confirmação do pagamento.</p>
+
+          <h3>⏰ Prazo para Realizar Palpites</h3>
+          <p>Os palpites podem ser realizados até 10 minutos antes do início da partida.</p>
+
+          <h3>👥 Quantidade Mínima de Participantes</h3>
+          <p>É necessário no mínimo 5 usuários diferentes com palpites válidos para validar um bolão.</p>
+
+          <h3>💸 Cancelamento e Estorno</h3>
+          <p>Se não atingir 5 participantes, o bolão será cancelado e valores devolvidos.</p>
+
+          <h3>⚽ Resultado Considerado</h3>
+          <p>Apenas tempo regulamentar (90min + acréscimos). Prorrogação e pênaltis não contam.</p>
+
+          <h3>🏦 Taxa Administrativa</h3>
+          <p>20% de cada palpite vai para plataforma, 80% para premiação. Ex: R$ 5 = R$ 1 + R$ 4.</p>
+
+          <h3>🥇 Divisão da Premiação</h3>
+          <p>Premiação distribuída entre palpites vencedores proporcionalmente (não por usuário).</p>
+
+          <div class="regras-destaque">
+            <strong>⚠️ Importante:</strong> Se tiver 2 palpites vencedores, recebe 2x a premiação.
+          </div>
+
+          <h3>📈 Acúmulo de Premiação</h3>
+          <p>Se nenhum palpite vencer antes da final, 20% do valor arrecadado vai para o ranking e 80% acumula para a final. Se, e somente se, a final não tiver palpite vencedor, soma-se o acumulado da final com o total arrecadado nos palpites da final; desse novo total, 20% vai para o ranking e 80% será destinado à plataforma.</p>
+
+          <h3>📊 Ranking</h3>
+          <p>Classificação geral. Critérios: 1º Conquistas, 2º Acertos, 3º Quantidade palpites.</p>
+
+          <h3>🎖️ Conquistas</h3>
+          <p>Objetivos e marcos. Quanto mais palpites, maiores chances de conquistar.</p>
+
+          <h3>📅 Alterações nas Partidas</h3>
+          <p>Adiamento/suspensão/cancelamento: novo prazo, manter palpites ou cancelar com devolução.</p>
+
+          <h3>⚙️ Correções</h3>
+          <p>Plataforma pode corrigir erros operacionais preservando integridade e transparência.</p>
+
+          <h3>🚫 Contas Irregulares</h3>
+          <p>Múltiplas contas, fraude, manipulação: suspensão/remoção e anulação de palpites.</p>
+
+          <h3>💳 Reembolsos</h3>
+          <p>Após pagamento confirmado, sem cancelamento/reembolso (exceto casos previstos).</p>
+
+          <h3>📢 Transparência</h3>
+          <p>Resultados, rankings e premiações podem ser acompanhados na plataforma.</p>
+
+          <h3>✅ Concordância</h3>
+          <p>Ao participar, você declara que leu, compreendeu e concorda com todas as regras.</p>
+
+          <h3>🔄 Atualizações</h3>
+          <p>Regras podem ser atualizadas quando necessário. Alterações valem após publicação.</p>
+
+          <div class="regras-destaque">
+            <strong>📚</strong> Veja <a href="/regras.html" target="_blank">regras completas com exemplos</a>.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">⚽ Bolão Copa do Mundo 2026</footer>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>

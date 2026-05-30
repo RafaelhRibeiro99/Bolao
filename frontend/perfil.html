@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perfil | Bol&atilde;o Copa 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a class="brand" href="/dashboard.html"><span class="brand-mark"><img src="assets/trophy-login.png" alt="Ta&ccedil;a Premium da Copa do Mundo"></span> Bol&atilde;o Copa 2026</a>
+      <div class="nav-menu">
+        <a href="/dashboard.html">Painel</a>
+        <a href="/jogos.html">Jogos</a>
+        <a href="/chaveamento.html">Chaveamento</a>
+        <a href="/ranking.html">Ranking</a>
+        <a href="/conquistas.html">Conquistas</a>
+        <a href="/transparencia.html">Transpar&ecirc;ncia</a>
+        <a href="/perfil.html">Perfil</a>
+        <a href="#" onclick="logout()">Sair</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-head">
+      <h1>Perfil</h1>
+      <p>Atualize seu nome p&uacute;blico, WhatsApp, Pix e avatar. Reforce seu status com t&iacute;tulos, molduras e auras.</p>
+    </header>
+    <section class="profile-grid">
+      <aside class="profile-card">
+        <div class="profile-visual">
+          <div id="perfilAvatar"></div>
+          <div class="profile-badges">
+            <span id="perfilTitulo" class="badge badge-premium">Sem t&iacute;tulo</span>
+          </div>
+        </div>
+        <div class="profile-summary">
+          <h2 id="perfilNome">Participante</h2>
+          <p id="perfilStats">Nenhuma conquista ainda.</p>
+          <div id="perfilRecentes" class="recent-achievements"></div>
+        </div>
+      </aside>
+      <section class="form-panel">
+        <form id="formPerfil">
+          <label>Nome p&uacute;blico<input id="nomeExibicao" required></label>
+          <label>WhatsApp<input id="whatsappPerfil"></label>
+          <label>Chave Pix<input id="pixPerfil" placeholder="CPF, e-mail, telefone ou chave aleat&oacute;ria"></label>
+          <div id="avatarControls" class="avatar-controls"></div>
+          <button class="primary">Salvar perfil</button>
+        </form>
+        <div id="mensagemPerfil"></div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="footer">Bol&atilde;o Copa do Mundo 2026</footer>
+  <script src="/js/api.js"></script>
+  <script src="/js/avatar.js"></script>
+  <script src="/js/perfil.js"></script>
+</body>
+</html>

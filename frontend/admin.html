@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administra&ccedil;&atilde;o | Bol&atilde;o Copa 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a class="brand" href="/admin.html"><span class="brand-mark">&#128081;</span> Administra&ccedil;&atilde;o do Bol&atilde;o</a>
+      <div class="nav-menu">
+        <a href="#usuariosBox">Usu&aacute;rios</a>
+        <a href="#apostasBox">Apostas</a>
+        <a href="#jogosBox">Jogos</a>
+        <a href="#conquistasBox">Conquistas</a>
+        <a href="/transparencia.html">Transpar&ecirc;ncia</a>
+        <a href="/dashboard.html">&Aacute;rea usu&aacute;rio</a>
+        <a href="#" onclick="logout()">Sair</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-head">
+      <h1>&#128081; Painel administrativo</h1>
+      <p>Valide apostas, gerencie jogos e publique resultados.</p>
+    </header>
+
+    <section class="stats-grid">
+      <div class="card stat-card"><small>Usu&aacute;rios</small><strong id="statUsuarios">&#128101; 0</strong></div>
+      <div class="card stat-card"><small>Apostas pendentes</small><strong id="statPendentes">&#9203; 0</strong></div>
+      <div class="card stat-card"><small>Apostas aprovadas</small><strong id="statAprovadas">&#9989; 0</strong></div>
+      <div class="card stat-card"><small>Jogos</small><strong id="statJogos">&#9917; 0</strong></div>
+      <div class="card stat-card"><small>Conquistas</small><strong id="statConquistas">&#127942; 0</strong></div>
+    </section>
+
+    <div id="msgAdmin"></div>
+
+    <section id="usuariosBox" class="data-section">
+      <div class="section-title"><h2>&#128101; Usu&aacute;rios cadastrados</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th>Pix</th><th>Tipo</th></tr></thead>
+          <tbody id="usuarios"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="apostasBox" class="data-section">
+      <div class="section-title"><h2>&#127919; Painel de apostas</h2><span class="badge">Aprova&ccedil;&atilde;o manual</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>C&oacute;digo</th><th>Usu&aacute;rio</th><th>Jogo</th><th>Aposta</th><th>Status</th><th>A&ccedil;&otilde;es</th></tr></thead>
+          <tbody id="apostasAdmin"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="form-panel">
+      <div class="section-title"><h2>&#9917; Cadastrar jogo</h2></div>
+      <form id="formJogo" class="form-grid">
+        <label>Time casa<select id="timeCasa" required></select></label>
+        <label>Time fora<select id="timeFora" required></select></label>
+        <label>Data e hora<input id="dataJogo" type="datetime-local" required></label>
+        <label>Fase
+          <select id="faseJogo">
+            <option value="fase_grupos">Fase de grupos</option>
+            <option value="16_avos">16 avos</option>
+            <option value="oitavas">Oitavas</option>
+            <option value="quartas">Quartas</option>
+            <option value="semifinal">Semifinal</option>
+            <option value="final">Final</option>
+          </select>
+        </label>
+        <button class="primary">Cadastrar</button>
+      </form>
+    </section>
+
+    <section id="jogosBox" class="data-section">
+      <div class="section-title"><h2>&#128197; Jogos</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Jogo</th><th>Fase</th><th>Data</th><th>Status</th><th>Liberado</th><th>Resultado</th><th>A&ccedil;&otilde;es</th></tr></thead>
+          <tbody id="jogosAdmin"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="conquistasBox" class="data-section">
+      <div class="section-title">
+        <h2>&#127942; Conquistas</h2>
+        <button class="primary" type="button" onclick="seedConquistasAdmin()">Atualizar conquistas</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>Grau</th><th>Recompensas</th><th>Meta</th></tr></thead>
+          <tbody id="conquistasAdmin"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">&#9917; Bol&atilde;o Copa do Mundo 2026</footer>
+  <script src="/js/api.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

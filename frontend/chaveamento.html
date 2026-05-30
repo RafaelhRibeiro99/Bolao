@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chaveamento | Bol&atilde;o Copa 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a class="brand" href="/dashboard.html"><span class="brand-mark"><img src="assets/trophy-login.png" alt="Ta&ccedil;a Premium da Copa do Mundo"></span> Bol&atilde;o Copa 2026</a>
+      <div class="nav-menu">
+        <a href="/dashboard.html">Painel</a>
+        <a href="/jogos.html">Jogos</a>
+        <a href="/chaveamento.html">Chaveamento</a>
+        <a href="/ranking.html">Ranking</a>
+        <a href="/conquistas.html">Conquistas</a>
+        <a href="/transparencia.html">Transpar&ecirc;ncia</a>
+        <a href="/perfil.html">Perfil</a>
+        <a href="/regras.html">Regras</a>
+        <a href="#" onclick="logout()">Sair</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container bracket-page">
+    <header class="page-head">
+      <h1>Chaveamento da Copa</h1>
+      <p>Mata-mata completo com 16 avos, oitavas, quartas, semifinais e final.</p>
+    </header>
+    <div id="mensagemChaveamento"></div>
+    <section id="bracketContainer" class="bracket-container"></section>
+  </main>
+
+  <footer class="footer">Bol&atilde;o Copa do Mundo 2026</footer>
+  <script src="/js/api.js"></script>
+  <script src="/js/paises.js"></script>
+  <script src="/js/chaveamento.js"></script>
+</body>
+</html>

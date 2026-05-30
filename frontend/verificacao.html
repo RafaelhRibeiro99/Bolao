@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmação de E-mail | Bolão Copa 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .verificacao-card {
+      max-width: 520px;
+      width: 100%;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .verificacao-card h1 {
+      margin-bottom: 10px;
+      color: #e2e8f0;
+    }
+    .verificacao-card .alert {
+      margin: 20px auto 0;
+      padding: 22px 18px;
+      background: rgba(59,130,246,.14);
+      color: #dbeafe;
+      border: 1px solid rgba(59,130,246,.35);
+      border-radius: 18px;
+    }
+    .verificacao-actions a {
+      min-width: 160px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a class="brand" href="/index.html"><span class="brand-mark"><img src="assets/trophy-login.png" alt="Taça Premium da Copa do Mundo"></span> Bolão Copa 2026</a>
+      <div class="nav-menu">
+        <a href="/index.html">Início</a>
+        <a class="btn btn-primary" href="/login.html">Entrar</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container auth-layout">
+    <section class="auth-card verificacao-card">
+      <h1>Verificação de E-mail</h1>
+      <div id="verificacaoMensagem" class="alert info">Aguarde enquanto verificamos seu e-mail...</div>
+      <div id="verificacaoActions" class="actions" style="display:none; margin-top:20px; justify-content:center;">
+        <a id="loginLink" class="btn btn-primary" href="/login.html">Ir para login</a>
+        <a id="resendLink" class="btn btn-success" href="/cadastro.html">Reenviar cadastro</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">⚽ Bolão Copa do Mundo 2026</footer>
+  <script src="/js/api.js"></script>
+  <script src="/js/verificacao.js"></script>
+</body>
+</html>

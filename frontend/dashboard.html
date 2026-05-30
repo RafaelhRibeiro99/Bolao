@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel | Bol&atilde;o Copa 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a class="brand" href="/dashboard.html"><span class="brand-mark"><img src="assets/trophy-login.png" alt="Ta&ccedil;a Premium da Copa do Mundo"></span> Bol&atilde;o Copa 2026</a>
+      <div class="nav-menu">
+        <a href="/dashboard.html">Painel</a>
+        <a href="/jogos.html">Jogos</a>
+        <a href="/chaveamento.html">Chaveamento</a>
+        <a href="/ranking.html">Ranking</a>
+        <a href="/conquistas.html">Conquistas</a>
+        <a href="/transparencia.html">Transpar&ecirc;ncia</a>
+        <a href="/perfil.html">Perfil</a>
+        <a href="/regras.html">Regras</a>
+        <a href="#" onclick="logout()">Sair</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-head">
+      <h1>&#128202; Painel</h1>
+      <p>Acompanhe seu desempenho no Bol&atilde;o da Copa 2026.</p>
+    </header>
+
+    <section class="card profile-card dashboard-profile-card">
+      <div class="profile-left">
+        <div class="avatar" id="avatarUsuario">&#9917;</div>
+        <div>
+          <h2 id="nomeUsuario">Participante</h2>
+          <span class="status-badge aprovado">Acesso liberado</span>
+        </div>
+      </div>
+      <div>
+        <strong class="stat-highlight" id="taxaAcerto">&#127919; 0%</strong>
+        <small>Taxa de acerto</small>
+      </div>
+    </section>
+
+    <section class="stats-grid">
+      <div class="card stat-card"><small>Total apostado</small><strong id="totalApostado">&#128176; R$ 0,00</strong></div>
+      <div class="card stat-card"><small>Total ganho</small><strong id="totalGanho">&#127942; R$ 0,00</strong></div>
+      <div class="card stat-card"><small>Minhas apostas</small><strong id="totalApostas">&#9917; 0</strong></div>
+      <div class="card stat-card"><small>Apostas aprovadas</small><strong id="totalAprovadas">&#128293; 0</strong></div>
+    </section>
+
+    <section class="data-section" id="painelMinhasApostas">
+      <div class="section-title"><h2>Minhas apostas e status</h2></div>
+      <div id="listaMinhasApostas"></div>
+    </section>
+
+    <section class="status-panel">
+      <div id="avisoPalpites" class="notice warning"></div>
+    </section>
+
+    <section class="grid">
+      <div class="data-section">
+        <div class="section-title"><h2>&#128293; Jogos de hoje</h2><a class="btn btn-primary" href="/jogos.html">Ver jogos</a></div>
+        <div id="jogosHoje"></div>
+      </div>
+      <div class="data-section">
+        <div class="section-title"><h2>&#127942; Conquistas</h2><a class="btn btn-primary" href="/conquistas.html">Ver todas</a></div>
+        <div id="conquistasResumo"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">&#9917; Bol&atilde;o Copa do Mundo 2026</footer>
+  <script src="/js/api.js"></script>
+  <script src="/js/paises.js"></script>
+  <script src="/js/avatar.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

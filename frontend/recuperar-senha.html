@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recuperar senha | Bolão Copa 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a class="brand" href="/index.html"><span class="brand-mark"><img src="assets/trophy-login.png" alt="Taça Premium da Copa do Mundo"></span> Bolão Copa 2026</a>
+      <div class="nav-menu">
+        <a href="/index.html">Início</a>
+        <a class="btn btn-primary" href="/login.html">Entrar</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container auth-layout">
+    <section class="auth-card">
+      <h1>🔐 Recuperar senha</h1>
+      <p class="text-muted">Informe o e-mail que você usou no cadastro para receber instruções de recuperação.</p>
+      <form id="formRecuperar">
+        <label>E-mail<input id="email" type="email" placeholder="seu@email.com" required></label>
+        <button class="primary">Enviar instruções</button>
+      </form>
+      <div id="mensagem"></div>
+      <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+        <a class="btn btn-success" href="/login.html">Voltar para login</a>
+        <a class="btn btn-success" href="/cadastro.html">Criar conta</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">⚽ Bolão Copa do Mundo 2026</footer>
+  <script src="/js/api.js"></script>
+  <script>
+    document.getElementById('formRecuperar')?.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        msg('mensagem', 'Informe um email válido.', 'error');
+        return;
+      }
+      msg('mensagem', 'Se o email existir, você receberá instruções em breve.', 'success');
+    });
+  </script>
+</body>
+</html>
