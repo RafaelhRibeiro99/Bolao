@@ -380,7 +380,8 @@ router.put('/jogos/:id', async (req, res) => {
     const result = await conn.query(
       `UPDATE jogos
        SET time_casa = ?, time_fora = ?, data_jogo = ?, fase = ?,
-           codigo_casa = ?, codigo_fora = ?, bandeira_casa = ?, bandeira_fora = ?
+           codigo_casa = ?, codigo_fora = ?, bandeira_casa = ?, bandeira_fora = ?,
+           status = "aberto", liberado_palpite = 1, jogo_validado = 0
        WHERE id = ?`,
       [
         time_casa,

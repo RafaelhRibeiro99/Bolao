@@ -437,7 +437,7 @@ document.getElementById('formJogo')?.addEventListener('submit', async (e) => {
     const url = jogoEmEdicaoId ? `/admin/jogos/${jogoEmEdicaoId}` : '/admin/jogos';
     const method = jogoEmEdicaoId ? 'PUT' : 'POST';
     await request(url, { method, body: JSON.stringify({ time_casa, time_fora, data_jogo, fase }) });
-    msg('msgAdmin', jogoEmEdicaoId ? 'Jogo atualizado com sucesso.' : 'Jogo criado com sucesso.');
+    msg('msgAdmin', jogoEmEdicaoId ? 'Jogo atualizado e liberado para apostas.' : 'Jogo criado com sucesso.');
     e.target.reset();
     sairEdicaoJogo();
     preencherSelecoesTimes();
