@@ -10,60 +10,6 @@ const faseLabels = {
   final: 'Final',
 };
 
-const SELECOES_COPA_2026 = [
-  'África do Sul',
-  'Alemanha',
-  'Argélia',
-  'Argentina',
-  'Arsenal',
-  'Arábia Saudita',
-  'Austrália',
-  'Áustria',
-  'Bélgica',
-  'Bósnia e Herzegovina',
-  'Brasil',
-  'Cabo Verde',
-  'Canadá',
-  'Colômbia',
-  'Coreia do Sul',
-  'Costa do Marfim',
-  'Croácia',
-  'Curazao',
-  'Egito',
-  'Equador',
-  'Escócia',
-  'Espanha',
-  'Estados Unidos',
-  'França',
-  'Gana',
-  'Haiti',
-  'Inglaterra',
-  'Irã',
-  'Iraque',
-  'Japão',
-  'Jordânia',
-  'Marrocos',
-  'México',
-  'Nigéria',
-  'Noruega',
-  'Nova Zelândia',
-  'Países Baixos',
-  'Panamá',
-  'Paraguai',
-  'PSG',
-  'Portugal',
-  'Qatar',
-  'República Democrática do Congo',
-  'República Tcheca',
-  'Senegal',
-  'Suécia',
-  'Suíça',
-  'Tunísia',
-  'Turquia',
-  'Uruguai',
-  'Uzbequistão',
-];
-
 function escapeHtml(valor) {
   return String(valor ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;',
@@ -78,18 +24,41 @@ function escapeJsString(valor) {
   return String(valor ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
-function preencherSelecoesCopa() {
+let timesAdminCache = [];
+let apostasAdminCache = [];
+
+function telaAdminAtual() {
+  const tela = String(location.hash || '#usuarios').replace('#', '');
+  return ['usuarios', 'apostas', 'times', 'jogos', 'conquistas', 'transparencia', 'area-usuario'].includes(tela)
+    ? tela
+    : 'usuarios';
+}
+
+function mostrarTelaAdmin(tela = telaAdminAtual()) {
+  document.querySelectorAll('[data-admin-screen]').forEach((el) => {
+    el.classList.toggle('hidden', el.dataset.adminScreen !== tela);
+  });
+  document.querySelectorAll('[data-admin-nav]').forEach((link) => {
+    link.classList.toggle('active', link.dataset.adminNav === tela);
+  });
+
+  if (tela === 'transparencia') {
+    carregarTransparenciaAdmin();
+  }
+}
+
+function preencherSelecoesTimes() {
   const selects = [document.getElementById('timeCasa'), document.getElementById('timeFora')].filter(Boolean);
-  const options = SELECOES_COPA_2026
-    .map((nome) => `<option value="${nome}">${nome}</option>`)
+  const options = timesAdminCache
+    .map((time) => `<option value="${escapeHtml(time.nome)}">${escapeHtml(time.nome)}</option>`)
     .join('');
   selects.forEach((select) => {
-    select.innerHTML = options;
+    select.innerHTML = options || '<option value="">Cadastre um time primeiro</option>';
   });
   const casa = document.getElementById('timeCasa');
   const fora = document.getElementById('timeFora');
-  if (casa) casa.value = 'Brasil';
-  if (fora) fora.value = 'Argentina';
+  if (casa && timesAdminCache.some((time) => time.nome === 'Brasil')) casa.value = 'Brasil';
+  if (fora && timesAdminCache.some((time) => time.nome === 'Argentina')) fora.value = 'Argentina';
 }
 
 function formatarFase(fase) {
@@ -112,6 +81,92 @@ function grauLabel(grau) {
     lendario: 'Lendário',
     mitico: 'Mítico',
   }[grau] || grau;
+}
+
+function dinheiroAdmin(valor) {
+  return `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`;
+}
+
+function statusApostaLabelAdmin(status) {
+  return { pendente: 'Pendente', aprovado: 'Aprovada', reprovado: 'Reprovada' }[status] || status || 'Pendente';
+}
+
+function resultadoTransparenciaAdmin(jogo) {
+  if (jogo.status !== 'finalizado') return '';
+  return `<span class="badge">Resultado: ${jogo.placar_casa ?? '-'} x ${jogo.placar_fora ?? '-'}</span>`;
+}
+
+function situacaoTransparenciaAdmin(jogo, palpite) {
+  if (palpite.vencedor) return '<span class="result-chip winner-chip">🏆 Ganhou</span>';
+  if (palpite.perdedor) return '<span class="result-chip loser-chip">✕ Perdeu</span>';
+  if (palpite.status_aposta === 'reprovado') return '<span class="result-chip rejected-chip">⚠ Reprovada</span>';
+  if (jogo.status === 'finalizado' && Number(jogo.jogo_validado || 0) !== 1) return '<span class="result-chip pending-chip">⌛ Não validado</span>';
+  return `<span class="status-badge ${palpite.status_aposta}">${statusApostaLabelAdmin(palpite.status_aposta)}</span>`;
+}
+
+function renderPalpitesTransparenciaAdmin(jogo) {
+  if (!jogo.palpites?.length) {
+    return '<p class="text-muted">Nenhuma aposta registrada para este jogo.</p>';
+  }
+
+  return `
+    <div class="table-wrap">
+      <table class="transparency-table">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Participante</th>
+            <th>Palpite</th>
+            <th>Resultado</th>
+            <th>Situação</th>
+            <th>Ganho</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${jogo.palpites.map((palpite) => `
+            <tr>
+              <td><strong class="bet-code">${palpite.vencedor ? '🏆 ' : ''}${escapeHtml(palpite.codigo_aposta)}</strong></td>
+              <td>${escapeHtml(palpite.nome)}</td>
+              <td>${palpite.palpite_casa} x ${palpite.palpite_fora}</td>
+              <td>${jogo.status === 'finalizado' ? `${jogo.placar_casa ?? '-'} x ${jogo.placar_fora ?? '-'}` : '- x -'}</td>
+              <td>${situacaoTransparenciaAdmin(jogo, palpite)}</td>
+              <td>${palpite.vencedor ? `<strong class="prize-value">${dinheiroAdmin(palpite.premio)}</strong>` : '<span class="text-muted">-</span>'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function carregarTransparenciaAdmin() {
+  const destino = document.getElementById('transparenciaAdmin');
+  if (!destino) return;
+
+  try {
+    const data = await request('/transparencia');
+    const jogos = data.jogos || [];
+    destino.innerHTML = jogos.map((jogo) => `
+      <article class="data-section transparency-card">
+        <div class="section-title">
+          <h2>${escapeHtml(jogo.time_casa)} x ${escapeHtml(jogo.time_fora)}</h2>
+          <div class="actions">
+            <span class="badge">${new Date(jogo.data_jogo).toLocaleString('pt-BR')}</span>
+            ${resultadoTransparenciaAdmin(jogo)}
+          </div>
+        </div>
+        <div class="transparency-summary">
+          <div><small>Palpites</small><strong>${jogo.total_palpites || 0}</strong></div>
+          <div><small>Aprovadas</small><strong>${jogo.total_aprovadas || 0}</strong></div>
+          <div><small>Vencedores</small><strong>${jogo.total_vencedores || 0}</strong></div>
+          <div><small>Prêmio por vencedor</small><strong>${dinheiroAdmin(jogo.premio_por_vencedor)}</strong></div>
+        </div>
+        ${renderPalpitesTransparenciaAdmin(jogo)}
+      </article>
+    `).join('') || '<section class="card"><h2>Nenhum jogo disponível</h2><p class="text-muted">Nenhum jogo cadastrado para exibir na transparência.</p></section>';
+  } catch (err) {
+    msg('transparenciaAdminMsg', err.message, 'error');
+  }
 }
 
 function efeitoNomeLabel(valor) {
@@ -142,8 +197,6 @@ function motivoReprovacaoHtml(aposta) {
   return `<small class="text-muted">⚠️ ${escapeHtml(corrigirTextoMojibake(aposta.motivo_reprovacao))}</small>`;
 }
 
-let apostasAdminCache = [];
-
 async function carregarConquistasAdmin() {
   try {
     const rows = await request('/admin/conquistas');
@@ -173,6 +226,48 @@ async function seedConquistasAdmin() {
     msg('msgAdmin', err.message, 'error');
   }
 }
+
+async function carregarTimesAdmin() {
+  try {
+    const rows = await request('/admin/times');
+    timesAdminCache = rows;
+    preencherSelecoesTimes();
+    const stat = document.getElementById('statTimes');
+    if (stat) stat.textContent = `⚽ ${rows.length}`;
+    const tbody = document.getElementById('timesAdmin');
+    if (!tbody) return;
+    tbody.innerHTML = rows.map((time) => `
+      <tr>
+        <td>${escapeHtml(time.nome)}</td>
+        <td>${time.codigo ? escapeHtml(time.codigo) : '<span class="text-muted">Não informado</span>'}</td>
+        <td>${time.escudo ? escapeHtml(time.escudo) : '<span class="text-muted">Não informado</span>'}</td>
+        <td><button class="danger" onclick="excluirTime(${time.id})">Excluir</button></td>
+      </tr>
+    `).join('') || '<tr><td colspan="4">Nenhum time cadastrado.</td></tr>';
+  } catch (err) {
+    msg('msgAdmin', err.message, 'error');
+  }
+}
+
+document.getElementById('formTime')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const nome = document.getElementById('nomeTime').value.trim();
+  const codigo = document.getElementById('codigoTime').value.trim();
+  const escudo = document.getElementById('escudoTime').value.trim();
+  if (!nome) {
+    msg('msgAdmin', 'Informe o nome do time.', 'error');
+    return;
+  }
+
+  try {
+    await request('/admin/times', { method: 'POST', body: JSON.stringify({ nome, codigo, escudo }) });
+    msg('msgAdmin', 'Time cadastrado com sucesso.');
+    e.target.reset();
+    await carregarTimesAdmin();
+  } catch (err) {
+    msg('msgAdmin', err.message, 'error');
+  }
+});
 
 async function carregarUsuarios() {
   try {
@@ -269,6 +364,10 @@ document.getElementById('formJogo')?.addEventListener('submit', async (e) => {
   const time_fora = document.getElementById('timeFora').value;
   const data_jogo = document.getElementById('dataJogo').value.replace('T', ' ') + ':00';
   const fase = document.getElementById('faseJogo').value;
+  if (!time_casa || !time_fora) {
+    msg('msgAdmin', 'Cadastre times antes de criar o jogo.', 'error');
+    return;
+  }
   if (time_casa === time_fora) {
     msg('msgAdmin', 'Selecione dois times diferentes.', 'error');
     return;
@@ -278,7 +377,7 @@ document.getElementById('formJogo')?.addEventListener('submit', async (e) => {
     await request('/admin/jogos', { method: 'POST', body: JSON.stringify({ time_casa, time_fora, data_jogo, fase }) });
     msg('msgAdmin', 'Jogo criado com sucesso.');
     e.target.reset();
-    preencherSelecoesCopa();
+    preencherSelecoesTimes();
     carregarJogosAdmin();
     carregarApostasAdmin();
   } catch (err) {
@@ -367,11 +466,26 @@ async function excluirJogo(id) {
   }
 }
 
+async function excluirTime(id) {
+  if (!confirm('Excluir este time da lista de cadastro? Os jogos já criados não serão alterados.')) return;
+
+  try {
+    await request(`/admin/times/${id}`, { method: 'DELETE' });
+    msg('msgAdmin', 'Time excluido com sucesso.');
+    await carregarTimesAdmin();
+  } catch (err) {
+    msg('msgAdmin', err.message, 'error');
+  }
+}
+
 carregarUsuarios();
-preencherSelecoesCopa();
+carregarTimesAdmin();
 carregarApostasAdmin();
 carregarJogosAdmin();
 carregarConquistasAdmin();
+mostrarTelaAdmin();
+
+window.addEventListener('hashchange', () => mostrarTelaAdmin());
 
 window.seedConquistasAdmin = seedConquistasAdmin;
 window.copiarPix = copiarPix;
@@ -379,4 +493,5 @@ window.atualizarAposta = atualizarAposta;
 window.liberarJogo = liberarJogo;
 window.resultadoJogo = resultadoJogo;
 window.excluirJogo = excluirJogo;
+window.excluirTime = excluirTime;
 

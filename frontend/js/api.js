@@ -75,6 +75,31 @@ function protegerPagina(admin = false) {
   if (admin && usuario.tipo !== 'admin') location.href = '/dashboard.html';
 }
 
+function mostrarAtalhoAdmin() {
+  const usuario = getUser();
+  if (!usuario || usuario.tipo !== 'admin') return;
+  if (location.pathname === '/admin.html') return;
+
+  const menu = document.querySelector('.nav-menu');
+  if (!menu || menu.querySelector('a[href="/admin.html"]')) return;
+
+  const link = document.createElement('a');
+  link.href = '/admin.html';
+  link.textContent = 'Admin';
+  menu.prepend(link);
+
+  const main = document.querySelector('main');
+  if (!main || document.querySelector('.admin-return-strip')) return;
+
+  const aviso = document.createElement('div');
+  aviso.className = 'admin-return-strip';
+  aviso.innerHTML = `
+    <span>Você está vendo a área do usuário como administrador.</span>
+    <a class="btn btn-primary" href="/admin.html">Voltar ao painel admin</a>
+  `;
+  main.prepend(aviso);
+}
+
 function normalizarConquistaToast(conquista) {
   return {
     ...conquista,
@@ -138,4 +163,7 @@ function iniciarMonitorConquistas() {
 }
 
 window.verificarConquistasToast = verificarConquistasToast;
-document.addEventListener('DOMContentLoaded', iniciarMonitorConquistas);
+document.addEventListener('DOMContentLoaded', () => {
+  mostrarAtalhoAdmin();
+  iniciarMonitorConquistas();
+});

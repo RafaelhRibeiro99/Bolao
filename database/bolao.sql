@@ -53,6 +53,14 @@ CREATE TABLE IF NOT EXISTS jogos (
   criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS times (
+  id SERIAL PRIMARY KEY,
+  nome VARCHAR(80) NOT NULL UNIQUE,
+  codigo VARCHAR(10) NULL,
+  escudo VARCHAR(255) NULL,
+  criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS palpites (
   id SERIAL PRIMARY KEY,
   usuario_id INT NOT NULL,
@@ -75,3 +83,59 @@ WHERE NOT EXISTS (SELECT 1 FROM usuarios WHERE email = 'admin@bolao.com');
 INSERT INTO jogos (time_casa, time_fora, data_jogo, status, liberado_palpite)
 SELECT 'Brasil', 'Argentina', '2026-06-15 16:00:00', 'aberto', 1
 WHERE NOT EXISTS (SELECT 1 FROM jogos WHERE time_casa='Brasil' AND time_fora='Argentina');
+
+INSERT INTO times (nome)
+SELECT nome FROM (VALUES
+  ('África do Sul'),
+  ('Alemanha'),
+  ('Argélia'),
+  ('Argentina'),
+  ('Arsenal'),
+  ('Arábia Saudita'),
+  ('Austrália'),
+  ('Áustria'),
+  ('Bélgica'),
+  ('Bósnia e Herzegovina'),
+  ('Brasil'),
+  ('Cabo Verde'),
+  ('Canadá'),
+  ('Colômbia'),
+  ('Coreia do Sul'),
+  ('Costa do Marfim'),
+  ('Croácia'),
+  ('Curazao'),
+  ('Egito'),
+  ('Equador'),
+  ('Escócia'),
+  ('Espanha'),
+  ('Estados Unidos'),
+  ('França'),
+  ('Gana'),
+  ('Haiti'),
+  ('Inglaterra'),
+  ('Irã'),
+  ('Iraque'),
+  ('Japão'),
+  ('Jordânia'),
+  ('Marrocos'),
+  ('México'),
+  ('Nigéria'),
+  ('Noruega'),
+  ('Nova Zelândia'),
+  ('Países Baixos'),
+  ('Panamá'),
+  ('Paraguai'),
+  ('PSG'),
+  ('Portugal'),
+  ('Qatar'),
+  ('República Democrática do Congo'),
+  ('República Tcheca'),
+  ('Senegal'),
+  ('Suécia'),
+  ('Suíça'),
+  ('Tunísia'),
+  ('Turquia'),
+  ('Uruguai'),
+  ('Uzbequistão')
+) AS seed(nome)
+WHERE NOT EXISTS (SELECT 1 FROM times WHERE LOWER(times.nome) = LOWER(seed.nome));

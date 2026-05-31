@@ -11,12 +11,13 @@
     <div class="nav-inner">
       <a class="brand" href="/admin.html"><span class="brand-mark">&#128081;</span> Administra&ccedil;&atilde;o do Bol&atilde;o</a>
       <div class="nav-menu">
-        <a href="#usuariosBox">Usu&aacute;rios</a>
-        <a href="#apostasBox">Apostas</a>
-        <a href="#jogosBox">Jogos</a>
-        <a href="#conquistasBox">Conquistas</a>
-        <a href="/transparencia.html">Transpar&ecirc;ncia</a>
-        <a href="/dashboard.html">&Aacute;rea usu&aacute;rio</a>
+        <a href="#usuarios" data-admin-nav="usuarios">Usu&aacute;rios</a>
+        <a href="#apostas" data-admin-nav="apostas">Apostas</a>
+        <a href="#times" data-admin-nav="times">Times</a>
+        <a href="#jogos" data-admin-nav="jogos">Jogos</a>
+        <a href="#conquistas" data-admin-nav="conquistas">Conquistas</a>
+        <a href="#transparencia" data-admin-nav="transparencia">Transpar&ecirc;ncia</a>
+        <a href="#area-usuario" data-admin-nav="area-usuario">&Aacute;rea usu&aacute;rio</a>
         <a href="#" onclick="logout()">Sair</a>
       </div>
     </div>
@@ -32,13 +33,14 @@
       <div class="card stat-card"><small>Usu&aacute;rios</small><strong id="statUsuarios">&#128101; 0</strong></div>
       <div class="card stat-card"><small>Apostas pendentes</small><strong id="statPendentes">&#9203; 0</strong></div>
       <div class="card stat-card"><small>Apostas aprovadas</small><strong id="statAprovadas">&#9989; 0</strong></div>
+      <div class="card stat-card"><small>Times</small><strong id="statTimes">&#9917; 0</strong></div>
       <div class="card stat-card"><small>Jogos</small><strong id="statJogos">&#9917; 0</strong></div>
       <div class="card stat-card"><small>Conquistas</small><strong id="statConquistas">&#127942; 0</strong></div>
     </section>
 
     <div id="msgAdmin"></div>
 
-    <section id="usuariosBox" class="data-section">
+    <section id="usuariosBox" class="data-section admin-screen" data-admin-screen="usuarios">
       <div class="section-title"><h2>&#128101; Usu&aacute;rios cadastrados</h2></div>
       <div class="table-wrap">
         <table>
@@ -48,7 +50,7 @@
       </div>
     </section>
 
-    <section id="apostasBox" class="data-section">
+    <section id="apostasBox" class="data-section admin-screen" data-admin-screen="apostas">
       <div class="section-title"><h2>&#127919; Painel de apostas</h2><span class="badge">Aprova&ccedil;&atilde;o manual</span></div>
       <div class="table-wrap">
         <table>
@@ -58,7 +60,23 @@
       </div>
     </section>
 
-    <section class="form-panel">
+    <section id="timesBox" class="data-section admin-screen" data-admin-screen="times">
+      <div class="section-title"><h2>&#9917; Times cadastrados</h2></div>
+      <form id="formTime" class="form-grid">
+        <label>Nome do time<input id="nomeTime" type="text" maxlength="80" required></label>
+        <label>C&oacute;digo<input id="codigoTime" type="text" maxlength="10" placeholder="Opcional"></label>
+        <label>Escudo<input id="escudoTime" type="text" maxlength="255" placeholder="/assets/clubes/time.svg"></label>
+        <button class="primary">Cadastrar time</button>
+      </form>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>C&oacute;digo</th><th>Escudo</th><th>A&ccedil;&otilde;es</th></tr></thead>
+          <tbody id="timesAdmin"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="form-panel admin-screen" data-admin-screen="jogos">
       <div class="section-title"><h2>&#9917; Cadastrar jogo</h2></div>
       <form id="formJogo" class="form-grid">
         <label>Time casa<select id="timeCasa" required></select></label>
@@ -78,7 +96,7 @@
       </form>
     </section>
 
-    <section id="jogosBox" class="data-section">
+    <section id="jogosBox" class="data-section admin-screen" data-admin-screen="jogos">
       <div class="section-title"><h2>&#128197; Jogos</h2></div>
       <div class="table-wrap">
         <table>
@@ -88,7 +106,7 @@
       </div>
     </section>
 
-    <section id="conquistasBox" class="data-section">
+    <section id="conquistasBox" class="data-section admin-screen" data-admin-screen="conquistas">
       <div class="section-title">
         <h2>&#127942; Conquistas</h2>
         <button class="primary" type="button" onclick="seedConquistasAdmin()">Atualizar conquistas</button>
@@ -98,6 +116,22 @@
           <thead><tr><th>Nome</th><th>Grau</th><th>Recompensas</th><th>Meta</th></tr></thead>
           <tbody id="conquistasAdmin"></tbody>
         </table>
+      </div>
+    </section>
+
+    <section id="transparenciaAdminBox" class="admin-screen" data-admin-screen="transparencia">
+      <div class="section-title"><h2>&#128065; Transpar&ecirc;ncia</h2></div>
+      <div id="transparenciaAdminMsg"></div>
+      <div id="transparenciaAdmin"></div>
+    </section>
+
+    <section id="areaUsuarioAdminBox" class="data-section admin-screen" data-admin-screen="area-usuario">
+      <div class="section-title"><h2>&#128100; &Aacute;rea usu&aacute;rio</h2></div>
+      <div class="admin-shortcuts">
+        <a class="btn btn-primary" href="/dashboard.html">Abrir painel do usu&aacute;rio</a>
+        <a class="btn btn-primary" href="/jogos.html">Abrir jogos</a>
+        <a class="btn btn-primary" href="/ranking.html">Abrir ranking</a>
+        <a class="btn btn-primary" href="/perfil.html">Abrir perfil</a>
       </div>
     </section>
   </main>

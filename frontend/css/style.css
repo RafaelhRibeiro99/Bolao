@@ -106,6 +106,38 @@ button {
   color: white;
 }
 
+.admin-return-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  border: 1px solid rgba(251, 191, 36, .35);
+  border-radius: 12px;
+  background: rgba(251, 191, 36, .1);
+  color: #fde68a;
+  font-weight: 700;
+}
+
+.admin-return-strip .btn {
+  flex: 0 0 auto;
+}
+
+.admin-screen.hidden {
+  display: none !important;
+}
+
+.nav-menu a.active {
+  color: #ffffff;
+}
+
+.admin-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .container {
   width: min(1180px, calc(100% - 28px));
   margin: 0 auto;

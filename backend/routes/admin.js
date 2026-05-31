@@ -9,12 +9,85 @@ const { seedConquistas } = require('../scripts/seed-conquistas');
 const router = express.Router();
 router.use(auth, adminOnly);
 
+const TIMES_PADRAO = [
+  'África do Sul',
+  'Alemanha',
+  'Argélia',
+  'Argentina',
+  'Arsenal',
+  'Arábia Saudita',
+  'Austrália',
+  'Áustria',
+  'Bélgica',
+  'Bósnia e Herzegovina',
+  'Brasil',
+  'Cabo Verde',
+  'Canadá',
+  'Colômbia',
+  'Coreia do Sul',
+  'Costa do Marfim',
+  'Croácia',
+  'Curazao',
+  'Egito',
+  'Equador',
+  'Escócia',
+  'Espanha',
+  'Estados Unidos',
+  'França',
+  'Gana',
+  'Haiti',
+  'Inglaterra',
+  'Irã',
+  'Iraque',
+  'Japão',
+  'Jordânia',
+  'Marrocos',
+  'México',
+  'Nigéria',
+  'Noruega',
+  'Nova Zelândia',
+  'Países Baixos',
+  'Panamá',
+  'Paraguai',
+  'PSG',
+  'Portugal',
+  'Qatar',
+  'República Democrática do Congo',
+  'República Tcheca',
+  'Senegal',
+  'Suécia',
+  'Suíça',
+  'Tunísia',
+  'Turquia',
+  'Uruguai',
+  'Uzbequistão',
+];
+
 async function garantirMotivoReprovacao(conn) {
   try {
     await conn.query('ALTER TABLE palpites ADD COLUMN IF NOT EXISTS motivo_reprovacao TEXT NULL');
   } catch (error) {
     if (!/already exists|duplicate column/i.test(error.message || '')) {
       throw error;
+    }
+  }
+}
+
+async function garantirTimes(conn) {
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS times (
+      id SERIAL PRIMARY KEY,
+      nome VARCHAR(80) NOT NULL UNIQUE,
+      codigo VARCHAR(10) NULL,
+      escudo VARCHAR(255) NULL,
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  for (const nome of TIMES_PADRAO) {
+    const existente = await conn.query('SELECT id FROM times WHERE LOWER(nome) = LOWER(?)', [nome]);
+    if (!existente.length) {
+      await conn.query('INSERT INTO times (nome) VALUES (?)', [nome]);
     }
   }
 }
@@ -99,6 +172,63 @@ router.put('/apostas/:id/status', async (req, res) => {
   } catch (err) {
     console.error('Erro ao atualizar aposta:', err);
     res.status(500).json({ message: 'Erro ao atualizar aposta.' });
+  } finally { if (conn) conn.release(); }
+});
+
+router.get('/times', async (_req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await garantirTimes(conn);
+    const rows = await conn.query('SELECT id, nome, codigo, escudo, criado_em FROM times ORDER BY nome ASC');
+    res.json(rows);
+  } catch (error) {
+    console.error('Erro ao listar times:', error);
+    res.status(500).json({ message: 'Erro ao listar times.' });
+  } finally { if (conn) conn.release(); }
+});
+
+router.post('/times', async (req, res) => {
+  const nome = String(req.body.nome || '').trim();
+  const codigo = String(req.body.codigo || '').trim().toUpperCase() || null;
+  const escudo = String(req.body.escudo || '').trim() || null;
+  if (!nome) {
+    return res.status(400).json({ message: 'Informe o nome do time.' });
+  }
+  if (nome.length > 80) {
+    return res.status(400).json({ message: 'O nome do time deve ter no máximo 80 caracteres.' });
+  }
+  if (codigo && codigo.length > 10) {
+    return res.status(400).json({ message: 'O código deve ter no máximo 10 caracteres.' });
+  }
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await garantirTimes(conn);
+    const existente = await conn.query('SELECT id FROM times WHERE LOWER(nome) = LOWER(?)', [nome]);
+    if (existente.length) {
+      return res.status(409).json({ message: 'Este time já está cadastrado.' });
+    }
+    await conn.query('INSERT INTO times (nome, codigo, escudo) VALUES (?, ?, ?)', [nome, codigo, escudo]);
+    res.status(201).json({ message: 'Time cadastrado.' });
+  } catch (error) {
+    console.error('Erro ao cadastrar time:', error);
+    res.status(500).json({ message: 'Erro ao cadastrar time.' });
+  } finally { if (conn) conn.release(); }
+});
+
+router.delete('/times/:id', async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await garantirTimes(conn);
+    const result = await conn.query('DELETE FROM times WHERE id = ?', [req.params.id]);
+    if (!result.affectedRows) return res.status(404).json({ message: 'Time não encontrado.' });
+    res.json({ message: 'Time excluído.' });
+  } catch (error) {
+    console.error('Erro ao excluir time:', error);
+    res.status(500).json({ message: 'Erro ao excluir time.' });
   } finally { if (conn) conn.release(); }
 });
 

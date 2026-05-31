@@ -34,6 +34,7 @@ if (process.env.USE_MEMORY_DB === 'true') {
   let nextUserId = 2;
   let nextGameId = 2;
   let nextPalpiteId = 1;
+  let nextTimeId = 52;
 
   const usuarios = [{
     id: 1,
@@ -76,6 +77,66 @@ if (process.env.USE_MEMORY_DB === 'true') {
     criado_em: new Date(),
   }];
 
+  const times = [
+    'África do Sul',
+    'Alemanha',
+    'Argélia',
+    'Argentina',
+    'Arsenal',
+    'Arábia Saudita',
+    'Austrália',
+    'Áustria',
+    'Bélgica',
+    'Bósnia e Herzegovina',
+    'Brasil',
+    'Cabo Verde',
+    'Canadá',
+    'Colômbia',
+    'Coreia do Sul',
+    'Costa do Marfim',
+    'Croácia',
+    'Curazao',
+    'Egito',
+    'Equador',
+    'Escócia',
+    'Espanha',
+    'Estados Unidos',
+    'França',
+    'Gana',
+    'Haiti',
+    'Inglaterra',
+    'Irã',
+    'Iraque',
+    'Japão',
+    'Jordânia',
+    'Marrocos',
+    'México',
+    'Nigéria',
+    'Noruega',
+    'Nova Zelândia',
+    'Países Baixos',
+    'Panamá',
+    'Paraguai',
+    'PSG',
+    'Portugal',
+    'Qatar',
+    'República Democrática do Congo',
+    'República Tcheca',
+    'Senegal',
+    'Suécia',
+    'Suíça',
+    'Tunísia',
+    'Turquia',
+    'Uruguai',
+    'Uzbequistão',
+  ].map((nome, index) => ({
+    id: index + 1,
+    nome,
+    codigo: null,
+    escudo: null,
+    criado_em: new Date(),
+  }));
+
   const palpites = [];
   const usuarioConquistas = [];
 
@@ -108,6 +169,40 @@ if (process.env.USE_MEMORY_DB === 'true') {
 
           if (normalized.startsWith('ALTER TABLE palpites ADD COLUMN IF NOT EXISTS motivo_reprovacao')) {
             return { affectedRows: 0 };
+          }
+
+          if (normalized.startsWith('CREATE TABLE IF NOT EXISTS times')) {
+            return { affectedRows: 0 };
+          }
+
+          if (normalized.startsWith('SELECT id FROM times WHERE LOWER(nome) = LOWER(?)')) {
+            const nome = String(params[0] || '').toLowerCase();
+            return times.filter((time) => time.nome.toLowerCase() === nome).map((time) => ({ id: time.id }));
+          }
+
+          if (normalized.startsWith('SELECT id, nome, codigo, escudo, criado_em FROM times ORDER BY nome ASC')) {
+            return [...times].sort((a, b) => a.nome.localeCompare(b.nome));
+          }
+
+          if (normalized.startsWith('INSERT INTO times')) {
+            const nome = String(params[0] || '').trim();
+            const existente = times.find((time) => time.nome.toLowerCase() === nome.toLowerCase());
+            if (existente || !nome) return { affectedRows: 0 };
+            times.push({
+              id: nextTimeId++,
+              nome,
+              codigo: params[1] || null,
+              escudo: params[2] || null,
+              criado_em: new Date(),
+            });
+            return { affectedRows: 1 };
+          }
+
+          if (normalized.startsWith('DELETE FROM times WHERE id = ?')) {
+            const index = times.findIndex((time) => time.id === Number(params[0]));
+            if (index === -1) return { affectedRows: 0 };
+            times.splice(index, 1);
+            return { affectedRows: 1 };
           }
 
           if (normalized.startsWith('SELECT id FROM usuarios WHERE email = ?')) {
