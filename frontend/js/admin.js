@@ -59,10 +59,11 @@ let timesAdminCache = [];
 let apostasAdminCache = [];
 let jogosAdminCache = [];
 let jogoEmEdicaoId = null;
+let jogoApostasModalId = null;
 
 function telaAdminAtual() {
   const tela = String(location.hash || '#usuarios').replace('#', '');
-  return ['usuarios', 'apostas', 'times', 'jogos', 'conquistas', 'transparencia', 'area-usuario'].includes(tela)
+  return ['usuarios', 'apostas', 'times', 'jogos', 'relatorios', 'conquistas', 'transparencia', 'area-usuario'].includes(tela)
     ? tela
     : 'usuarios';
 }
@@ -77,6 +78,9 @@ function mostrarTelaAdmin(tela = telaAdminAtual()) {
 
   if (tela === 'transparencia') {
     carregarTransparenciaAdmin();
+  }
+  if (tela === 'relatorios') {
+    carregarRelatoriosAdmin();
   }
 }
 
@@ -118,6 +122,10 @@ function grauLabel(grau) {
 
 function dinheiroAdmin(valor) {
   return `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`;
+}
+
+function nomeJogoAdmin(jogo) {
+  return `${escapeHtml(jogo.time_casa)} x ${escapeHtml(jogo.time_fora)} - ${formatarDataHoraJogo(jogo.data_jogo)}`;
 }
 
 function statusApostaLabelAdmin(status) {
@@ -199,6 +207,113 @@ async function carregarTransparenciaAdmin() {
     `).join('') || '<section class="card"><h2>Nenhum jogo disponível</h2><p class="text-muted">Nenhum jogo cadastrado para exibir na transparência.</p></section>';
   } catch (err) {
     msg('transparenciaAdminMsg', err.message, 'error');
+  }
+}
+
+function tabelaGanhadoresRelatorio(jogo) {
+  if (!jogo.ganhadores?.length) {
+    return `<article class="data-section"><h3>${nomeJogoAdmin(jogo)}</h3><p class="text-muted">Nenhum ganhador com placar exato.</p></article>`;
+  }
+
+  return `
+    <article class="data-section">
+      <div class="section-title"><h3>${nomeJogoAdmin(jogo)}</h3><span class="badge">${jogo.ganhadores.length} ganhador(es)</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>Pix</th><th>Jogo</th><th>Palpite</th><th>Resultado</th><th>Valor a receber</th></tr></thead>
+          <tbody>
+            ${jogo.ganhadores.map((palpite) => `
+              <tr>
+                <td>${escapeHtml(palpite.nome)}</td>
+                <td>${palpite.pix_chave ? escapeHtml(palpite.pix_chave) : '<span class="text-muted">Não informado</span>'}</td>
+                <td>${escapeHtml(jogo.time_casa)} x ${escapeHtml(jogo.time_fora)}</td>
+                <td>${palpite.palpite_casa} x ${palpite.palpite_fora}</td>
+                <td>${jogo.placar_casa ?? '-'} x ${jogo.placar_fora ?? '-'}</td>
+                <td><strong>${dinheiroAdmin(palpite.valor_a_receber)}</strong></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  `;
+}
+
+function tabelaApostasRelatorio(jogo) {
+  return `
+    <article class="data-section">
+      <div class="section-title"><h3>${nomeJogoAdmin(jogo)}</h3><span class="badge">${jogo.apostas.length} aposta(s)</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Código</th><th>Nome</th><th>Pix</th><th>Palpite</th><th>Resultado</th><th>Status</th><th>Ganhou</th></tr></thead>
+          <tbody>
+            ${jogo.apostas.map((palpite) => `
+              <tr>
+                <td><strong class="bet-code">${escapeHtml(palpite.codigo_aposta || '-')}</strong></td>
+                <td>${escapeHtml(palpite.nome)}</td>
+                <td>${palpite.pix_chave ? escapeHtml(palpite.pix_chave) : '<span class="text-muted">Não informado</span>'}</td>
+                <td>${palpite.palpite_casa} x ${palpite.palpite_fora}</td>
+                <td>${jogo.status === 'finalizado' ? `${jogo.placar_casa ?? '-'} x ${jogo.placar_fora ?? '-'}` : '- x -'}</td>
+                <td><span class="status-badge ${palpite.status_aposta}">${palpite.status_aposta}</span></td>
+                <td>${palpite.vencedor ? `<strong>${dinheiroAdmin(palpite.valor_a_receber)}</strong>` : '<span class="text-muted">Não</span>'}</td>
+              </tr>
+            `).join('') || '<tr><td colspan="7">Nenhuma aposta neste jogo.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  `;
+}
+
+function tabelaFinanceiroRelatorio(data) {
+  const total = data.total_geral || {};
+  return `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Jogo</th><th>Apostas</th><th>Aprovadas</th><th>Pendentes</th><th>Reprovadas</th>
+            <th>Total arrecadado</th><th>Parte a pagar</th><th>Recebido plataforma</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(data.jogos || []).map((jogo) => `
+            <tr>
+              <td>${nomeJogoAdmin(jogo)}</td>
+              <td>${jogo.financeiro.total_apostas}</td>
+              <td>${jogo.financeiro.total_aprovadas}</td>
+              <td>${jogo.financeiro.total_pendentes}</td>
+              <td>${jogo.financeiro.total_reprovadas}</td>
+              <td>${dinheiroAdmin(jogo.financeiro.arrecadado)}</td>
+              <td><strong>${dinheiroAdmin(jogo.financeiro.valor_a_pagar)}</strong></td>
+              <td>${dinheiroAdmin(jogo.financeiro.plataforma)}</td>
+            </tr>
+          `).join('')}
+          <tr>
+            <td><strong>Total geral</strong></td>
+            <td><strong>${total.total_apostas || 0}</strong></td>
+            <td><strong>${total.total_aprovadas || 0}</strong></td>
+            <td><strong>${total.total_pendentes || 0}</strong></td>
+            <td><strong>${total.total_reprovadas || 0}</strong></td>
+            <td><strong>${dinheiroAdmin(total.arrecadado)}</strong></td>
+            <td><strong>${dinheiroAdmin(total.valor_a_pagar)}</strong></td>
+            <td><strong>${dinheiroAdmin(total.plataforma)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function carregarRelatoriosAdmin() {
+  try {
+    const data = await request('/admin/relatorios');
+    const jogos = data.jogos || [];
+    document.getElementById('relatorioGanhadores').innerHTML = jogos.map(tabelaGanhadoresRelatorio).join('') || '<p class="text-muted">Nenhum jogo cadastrado.</p>';
+    document.getElementById('relatorioApostas').innerHTML = jogos.map(tabelaApostasRelatorio).join('') || '<p class="text-muted">Nenhum jogo cadastrado.</p>';
+    document.getElementById('relatorioFinanceiro').innerHTML = tabelaFinanceiroRelatorio(data);
+  } catch (err) {
+    msg('relatoriosAdminMsg', err.message, 'error');
   }
 }
 
@@ -366,30 +481,100 @@ async function carregarApostasAdmin() {
     apostasAdminCache = rows;
     document.getElementById('statPendentes').textContent = `⏳ ${rows.filter(a => a.status_aposta === 'pendente').length}`;
     document.getElementById('statAprovadas').textContent = `✅ ${rows.filter(a => a.status_aposta === 'aprovado').length}`;
-    document.getElementById('apostasAdmin').innerHTML = rows.map(a => {
-      const vencedor = a.status_jogo === 'finalizado'
-        && Number(a.jogo_validado || 0) === 1
-        && a.status_aposta === 'aprovado'
-        && Number(a.pontos || 0) === 10;
-      return `
+    const jogosMap = new Map();
+    rows.forEach((aposta) => {
+      const jogoId = Number(aposta.jogo_id);
+      if (!jogosMap.has(jogoId)) {
+        jogosMap.set(jogoId, {
+          id: jogoId,
+          time_casa: aposta.time_casa,
+          time_fora: aposta.time_fora,
+          data_jogo: aposta.data_jogo,
+          total: 0,
+          pendentes: 0,
+          aprovadas: 0,
+          reprovadas: 0,
+        });
+      }
+      const jogo = jogosMap.get(jogoId);
+      jogo.total += 1;
+      if (aposta.status_aposta === 'pendente') jogo.pendentes += 1;
+      if (aposta.status_aposta === 'aprovado') jogo.aprovadas += 1;
+      if (aposta.status_aposta === 'reprovado') jogo.reprovadas += 1;
+    });
+
+    document.getElementById('apostasAdmin').innerHTML = [...jogosMap.values()].map((jogo) => `
       <tr>
-        <td><strong class="bet-code">${vencedor ? '🏆 ' : ''}${escapeHtml(a.codigo_aposta || '-')}</strong></td>
-        <td>${escapeHtml(a.nome)}<br><small>${escapeHtml(a.email)}</small></td>
-        <td>${escapeHtml(a.time_casa)} x ${escapeHtml(a.time_fora)}</td>
-        <td>${a.palpite_casa} x ${a.palpite_fora}</td>
-        <td><span class="status-badge ${a.status_aposta}">${a.status_aposta}</span>${motivoReprovacaoHtml(a)}</td>
-        <td>
-          <button class="secondary" onclick="atualizarAposta(${a.id}, 'aprovado')">Aprovar</button>
-          <button class="primary" onclick="atualizarAposta(${a.id}, 'pendente')">Pendente</button>
-          <button class="danger" onclick="atualizarAposta(${a.id}, 'reprovado')">${a.status_aposta === 'reprovado' ? 'Alterar motivo' : 'Reprovar'}</button>
-        </td>
+        <td>${escapeHtml(jogo.time_casa)} x ${escapeHtml(jogo.time_fora)}</td>
+        <td>${formatarDataHoraJogo(jogo.data_jogo)}</td>
+        <td>${jogo.total}</td>
+        <td>${jogo.pendentes}</td>
+        <td>${jogo.aprovadas}</td>
+        <td>${jogo.reprovadas}</td>
+        <td><button class="primary" onclick="abrirModalApostasJogo(${jogo.id})">Ver apostas</button></td>
       </tr>
-    `;
-    }).join('') || '<tr><td colspan="6">Nenhuma aposta registrada.</td></tr>';
+    `).join('') || '<tr><td colspan="7">Nenhuma aposta registrada.</td></tr>';
   } catch (err) {
     msg('msgAdmin', err.message, 'error');
   }
 }
+
+function apostasDoJogoAtual() {
+  const termo = document.getElementById('buscaApostasJogo')?.value.trim().toLowerCase() || '';
+  return apostasAdminCache
+    .filter((aposta) => Number(aposta.jogo_id) === Number(jogoApostasModalId))
+    .filter((aposta) => !termo || String(aposta.nome || '').toLowerCase().includes(termo));
+}
+
+function renderizarModalApostasJogo() {
+  const lista = document.getElementById('apostasJogoLista');
+  if (!lista) return;
+
+  const apostas = apostasDoJogoAtual();
+  const todas = apostasAdminCache.filter((aposta) => Number(aposta.jogo_id) === Number(jogoApostasModalId));
+  const jogo = todas[0];
+  const resumo = document.getElementById('apostasJogoResumo');
+  if (resumo) {
+    resumo.innerHTML = `
+      <div><small>Total</small><strong>${todas.length}</strong></div>
+      <div><small>Pendentes</small><strong>${todas.filter((a) => a.status_aposta === 'pendente').length}</strong></div>
+      <div><small>Aprovadas</small><strong>${todas.filter((a) => a.status_aposta === 'aprovado').length}</strong></div>
+      <div><small>Reprovadas</small><strong>${todas.filter((a) => a.status_aposta === 'reprovado').length}</strong></div>
+    `;
+  }
+  if (jogo) {
+    document.getElementById('apostasJogoTitulo').textContent = `${jogo.time_casa} x ${jogo.time_fora}`;
+  }
+
+  lista.innerHTML = apostas.map((a) => `
+    <tr>
+      <td><strong class="bet-code">${escapeHtml(a.codigo_aposta || '-')}</strong></td>
+      <td>${escapeHtml(a.nome)}<br><small>${escapeHtml(a.email)}</small></td>
+      <td>${a.palpite_casa} x ${a.palpite_fora}</td>
+      <td><span class="status-badge ${a.status_aposta}">${a.status_aposta}</span>${motivoReprovacaoHtml(a)}</td>
+      <td>
+        <button class="secondary" onclick="atualizarAposta(${a.id}, 'aprovado')">Aprovar</button>
+        <button class="primary" onclick="atualizarAposta(${a.id}, 'pendente')">Pendente</button>
+        <button class="danger" onclick="atualizarAposta(${a.id}, 'reprovado')">${a.status_aposta === 'reprovado' ? 'Alterar motivo' : 'Reprovar'}</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="5">Nenhuma aposta encontrada.</td></tr>';
+}
+
+function abrirModalApostasJogo(jogoId) {
+  jogoApostasModalId = Number(jogoId);
+  const busca = document.getElementById('buscaApostasJogo');
+  if (busca) busca.value = '';
+  renderizarModalApostasJogo();
+  document.getElementById('apostasJogoModal')?.classList.remove('hidden');
+}
+
+function fecharModalApostasJogo() {
+  jogoApostasModalId = null;
+  document.getElementById('apostasJogoModal')?.classList.add('hidden');
+}
+
+document.getElementById('buscaApostasJogo')?.addEventListener('input', renderizarModalApostasJogo);
 
 async function atualizarAposta(id, status) {
   try {
@@ -412,6 +597,7 @@ async function atualizarAposta(id, status) {
     });
     await carregarApostasAdmin();
     await carregarUsuarios();
+    if (jogoApostasModalId) renderizarModalApostasJogo();
     msg('msgAdmin', 'Status da aposta atualizado.');
   } catch (err) {
     msg('msgAdmin', err.message, 'error');
@@ -593,8 +779,11 @@ mostrarTelaAdmin();
 window.addEventListener('hashchange', () => mostrarTelaAdmin());
 
 window.seedConquistasAdmin = seedConquistasAdmin;
+window.carregarRelatoriosAdmin = carregarRelatoriosAdmin;
 window.copiarPix = copiarPix;
 window.atualizarAposta = atualizarAposta;
+window.abrirModalApostasJogo = abrirModalApostasJogo;
+window.fecharModalApostasJogo = fecharModalApostasJogo;
 window.liberarJogo = liberarJogo;
 window.editarJogo = editarJogo;
 window.resultadoJogo = resultadoJogo;

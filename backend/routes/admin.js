@@ -145,6 +145,37 @@ function serializarJogoData(row) {
   return row?.data_jogo ? { ...row, data_jogo: formatarDataHoraLocal(row.data_jogo) } : row;
 }
 
+function palpitePlacarExato(jogo, palpite) {
+  return Number(jogo.placar_casa) === Number(palpite.palpite_casa)
+    && Number(jogo.placar_fora) === Number(palpite.palpite_fora);
+}
+
+function calcularResumoFinanceiroJogo(jogo, palpites) {
+  const aprovadas = palpites.filter((palpite) => palpite.status_aposta === 'aprovado');
+  const vencedores = Number(jogo.jogo_validado || 0) === 1 && jogo.status === 'finalizado'
+    ? aprovadas.filter((palpite) => palpitePlacarExato(jogo, palpite))
+    : [];
+  const arrecadado = aprovadas.length * 5;
+  const premioBase = arrecadado * 0.8;
+  const taxaPlataforma = arrecadado * 0.2;
+  const premioTotal = vencedores.length
+    ? premioBase + (jogo.fase === 'final' ? Number(jogo.premio_acumulado || 0) : 0)
+    : 0;
+  const valorPorVencedor = vencedores.length ? premioTotal / vencedores.length : 0;
+
+  return {
+    total_apostas: palpites.length,
+    total_aprovadas: aprovadas.length,
+    total_pendentes: palpites.filter((palpite) => palpite.status_aposta === 'pendente').length,
+    total_reprovadas: palpites.filter((palpite) => palpite.status_aposta === 'reprovado').length,
+    total_vencedores: vencedores.length,
+    arrecadado,
+    valor_a_pagar: premioTotal,
+    valor_por_vencedor: valorPorVencedor,
+    plataforma: taxaPlataforma,
+  };
+}
+
 router.get('/conquistas', async (_req, res) => {
   res.json(CONQUISTAS);
 });
@@ -183,6 +214,78 @@ router.get('/apostas', async (_req, res) => {
     res.json(rows);
   } catch {
     res.status(500).json({ message: 'Erro ao listar apostas.' });
+  } finally { if (conn) conn.release(); }
+});
+
+router.get('/relatorios', async (_req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const jogos = await conn.query('SELECT * FROM jogos ORDER BY data_jogo ASC');
+    const apostas = await conn.query(`
+      SELECT p.*, u.nome, u.email, u.pix_chave, j.time_casa, j.time_fora, j.data_jogo, j.placar_casa, j.placar_fora,
+        j.status AS status_jogo, j.fase, j.jogo_validado, j.premio_acumulado
+      FROM palpites p
+      INNER JOIN usuarios u ON u.id = p.usuario_id
+      INNER JOIN jogos j ON j.id = p.jogo_id
+      ORDER BY j.data_jogo ASC, p.data_palpite ASC
+    `);
+
+    const jogosRelatorio = jogos.map((jogo) => {
+      const jogoSerializado = serializarJogoData(jogo);
+      const palpites = apostas.filter((palpite) => Number(palpite.jogo_id) === Number(jogo.id));
+      const financeiro = calcularResumoFinanceiroJogo(jogo, palpites);
+
+      const apostasFormatadas = palpites.map((palpite) => {
+        const vencedor = Number(jogo.jogo_validado || 0) === 1
+          && jogo.status === 'finalizado'
+          && palpite.status_aposta === 'aprovado'
+          && palpitePlacarExato(jogo, palpite);
+        return {
+          id: palpite.id,
+          codigo_aposta: palpite.codigo_aposta,
+          nome: palpite.nome,
+          email: palpite.email,
+          pix_chave: palpite.pix_chave,
+          palpite_casa: palpite.palpite_casa,
+          palpite_fora: palpite.palpite_fora,
+          status_aposta: palpite.status_aposta,
+          pontos: palpite.pontos,
+          vencedor,
+          valor_a_receber: vencedor ? financeiro.valor_por_vencedor : 0,
+        };
+      });
+
+      return {
+        ...jogoSerializado,
+        financeiro,
+        ganhadores: apostasFormatadas.filter((palpite) => palpite.vencedor),
+        apostas: apostasFormatadas,
+      };
+    });
+
+    const totalGeral = jogosRelatorio.reduce((acc, jogo) => ({
+      total_apostas: acc.total_apostas + jogo.financeiro.total_apostas,
+      total_aprovadas: acc.total_aprovadas + jogo.financeiro.total_aprovadas,
+      total_pendentes: acc.total_pendentes + jogo.financeiro.total_pendentes,
+      total_reprovadas: acc.total_reprovadas + jogo.financeiro.total_reprovadas,
+      arrecadado: acc.arrecadado + jogo.financeiro.arrecadado,
+      valor_a_pagar: acc.valor_a_pagar + jogo.financeiro.valor_a_pagar,
+      plataforma: acc.plataforma + jogo.financeiro.plataforma,
+    }), {
+      total_apostas: 0,
+      total_aprovadas: 0,
+      total_pendentes: 0,
+      total_reprovadas: 0,
+      arrecadado: 0,
+      valor_a_pagar: 0,
+      plataforma: 0,
+    });
+
+    res.json({ jogos: jogosRelatorio, total_geral: totalGeral });
+  } catch (error) {
+    console.error('Erro ao gerar relatórios:', error);
+    res.status(500).json({ message: 'Erro ao gerar relatórios.' });
   } finally { if (conn) conn.release(); }
 });
 

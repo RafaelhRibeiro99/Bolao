@@ -15,6 +15,7 @@
         <a href="#apostas" data-admin-nav="apostas">Apostas</a>
         <a href="#times" data-admin-nav="times">Times</a>
         <a href="#jogos" data-admin-nav="jogos">Jogos</a>
+        <a href="#relatorios" data-admin-nav="relatorios">Relat&oacute;rios</a>
         <a href="#conquistas" data-admin-nav="conquistas">Conquistas</a>
         <a href="#transparencia" data-admin-nav="transparencia">Transpar&ecirc;ncia</a>
         <a href="#area-usuario" data-admin-nav="area-usuario">&Aacute;rea usu&aacute;rio</a>
@@ -54,11 +55,26 @@
       <div class="section-title"><h2>&#127919; Painel de apostas</h2><span class="badge">Aprova&ccedil;&atilde;o manual</span></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>C&oacute;digo</th><th>Usu&aacute;rio</th><th>Jogo</th><th>Aposta</th><th>Status</th><th>A&ccedil;&otilde;es</th></tr></thead>
+          <thead><tr><th>Jogo</th><th>Data</th><th>Total</th><th>Pendentes</th><th>Aprovadas</th><th>Reprovadas</th><th>A&ccedil;&otilde;es</th></tr></thead>
           <tbody id="apostasAdmin"></tbody>
         </table>
       </div>
     </section>
+
+    <div id="apostasJogoModal" class="payment-modal hidden" role="dialog" aria-modal="true" aria-labelledby="apostasJogoTitulo">
+      <div class="payment-modal-panel admin-bets-modal">
+        <button class="modal-close" type="button" onclick="fecharModalApostasJogo()">×</button>
+        <h2 id="apostasJogoTitulo">Apostas do jogo</h2>
+        <label>Pesquisar por nome<input id="buscaApostasJogo" type="search" placeholder="Digite o nome do participante"></label>
+        <div id="apostasJogoResumo" class="transparency-summary"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>C&oacute;digo</th><th>Usu&aacute;rio</th><th>Palpite</th><th>Status</th><th>A&ccedil;&otilde;es</th></tr></thead>
+            <tbody id="apostasJogoLista"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
     <section id="timesBox" class="data-section admin-screen" data-admin-screen="times">
       <div class="section-title"><h2>&#9917; Times cadastrados</h2></div>
@@ -105,6 +121,26 @@
           <tbody id="jogosAdmin"></tbody>
         </table>
       </div>
+    </section>
+
+    <section id="relatoriosBox" class="admin-screen" data-admin-screen="relatorios">
+      <div class="section-title">
+        <h2>&#128202; Relat&oacute;rios</h2>
+        <button class="primary" type="button" onclick="carregarRelatoriosAdmin()">Atualizar relat&oacute;rios</button>
+      </div>
+      <div id="relatoriosAdminMsg"></div>
+      <section class="data-section">
+        <div class="section-title"><h2>Ganhadores por jogo</h2></div>
+        <div id="relatorioGanhadores"></div>
+      </section>
+      <section class="data-section">
+        <div class="section-title"><h2>Todas as apostas por jogo</h2></div>
+        <div id="relatorioApostas"></div>
+      </section>
+      <section class="data-section">
+        <div class="section-title"><h2>Financeiro</h2></div>
+        <div id="relatorioFinanceiro"></div>
+      </section>
     </section>
 
     <section id="conquistasBox" class="data-section admin-screen" data-admin-screen="conquistas">

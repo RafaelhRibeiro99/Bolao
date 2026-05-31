@@ -553,6 +553,30 @@ if (process.env.USE_MEMORY_DB === 'true') {
               .sort((a, b) => new Date(b.data_palpite) - new Date(a.data_palpite));
           }
 
+          if (normalized.startsWith('SELECT p.*, u.nome, u.email, u.pix_chave, j.time_casa')) {
+            return palpites
+              .map((p) => {
+                const user = usuarios.find((u) => u.id === p.usuario_id);
+                const jogo = jogos.find((j) => j.id === p.jogo_id);
+                return {
+                  ...p,
+                  nome: user?.nome,
+                  email: user?.email,
+                  pix_chave: user?.pix_chave,
+                  time_casa: jogo?.time_casa,
+                  time_fora: jogo?.time_fora,
+                  data_jogo: jogo?.data_jogo,
+                  placar_casa: jogo?.placar_casa,
+                  placar_fora: jogo?.placar_fora,
+                  status_jogo: jogo?.status,
+                  fase: jogo?.fase,
+                  jogo_validado: jogo?.jogo_validado,
+                  premio_acumulado: jogo?.premio_acumulado,
+                };
+              })
+              .sort((a, b) => new Date(a.data_jogo) - new Date(b.data_jogo) || new Date(a.data_palpite) - new Date(b.data_palpite));
+          }
+
           if (normalized.startsWith('UPDATE palpites SET status_aposta = ?')) {
             const palpite = palpites.find((p) => p.id === Number(params[1]));
             if (palpite) palpite.status_aposta = params[0];

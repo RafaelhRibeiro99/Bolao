@@ -1453,6 +1453,12 @@ tr:hover td { background: rgba(255,255,255,.03); }
   box-shadow: 0 24px 70px rgba(0, 0, 0, .48);
 }
 
+.payment-modal-panel.admin-bets-modal {
+  width: min(1080px, 100%);
+  max-height: min(86vh, 760px);
+  overflow: auto;
+}
+
 .payment-modal-panel h2 {
   margin: 14px 0 8px;
   font-size: 26px;
