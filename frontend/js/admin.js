@@ -34,6 +34,14 @@ function formatarDataHoraJogo(valor) {
   return texto;
 }
 
+function valorDatetimeLocal(valor) {
+  if (!valor) return '';
+  const texto = String(valor);
+  const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+  if (!match) return '';
+  return `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`;
+}
+
 function arquivoPngParaDataUrl(file) {
   return new Promise((resolve, reject) => {
     if (!file) return resolve(null);
@@ -49,6 +57,8 @@ function arquivoPngParaDataUrl(file) {
 
 let timesAdminCache = [];
 let apostasAdminCache = [];
+let jogosAdminCache = [];
+let jogoEmEdicaoId = null;
 
 function telaAdminAtual() {
   const tela = String(location.hash || '#usuarios').replace('#', '');
@@ -424,9 +434,12 @@ document.getElementById('formJogo')?.addEventListener('submit', async (e) => {
   }
 
   try {
-    await request('/admin/jogos', { method: 'POST', body: JSON.stringify({ time_casa, time_fora, data_jogo, fase }) });
-    msg('msgAdmin', 'Jogo criado com sucesso.');
+    const url = jogoEmEdicaoId ? `/admin/jogos/${jogoEmEdicaoId}` : '/admin/jogos';
+    const method = jogoEmEdicaoId ? 'PUT' : 'POST';
+    await request(url, { method, body: JSON.stringify({ time_casa, time_fora, data_jogo, fase }) });
+    msg('msgAdmin', jogoEmEdicaoId ? 'Jogo atualizado com sucesso.' : 'Jogo criado com sucesso.');
     e.target.reset();
+    sairEdicaoJogo();
     preencherSelecoesTimes();
     carregarJogosAdmin();
     carregarApostasAdmin();
@@ -438,6 +451,7 @@ document.getElementById('formJogo')?.addEventListener('submit', async (e) => {
 async function carregarJogosAdmin() {
   try {
     const rows = await request('/admin/jogos');
+    jogosAdminCache = rows;
     document.getElementById('statJogos').textContent = `⚽ ${rows.length}`;
     document.getElementById('jogosAdmin').innerHTML = rows.map(j => `
       <tr>
@@ -448,6 +462,7 @@ async function carregarJogosAdmin() {
         <td><span class="status-badge ${j.liberado_palpite ? 'pago' : 'pendente'}">${j.liberado_palpite ? 'Sim' : 'Não'}</span></td>
         <td>${formatarResultadoAdmin(j)}</td>
         <td>
+          <button class="secondary" onclick="editarJogo(${j.id})">Editar</button>
           <button class="secondary" onclick="liberarJogo(${j.id}, true)">Liberar</button>
           <button class="danger" onclick="liberarJogo(${j.id}, false)">Bloquear</button>
           <form class="inline-form result-form" onsubmit="resultadoJogo(event, ${j.id})">
@@ -464,6 +479,46 @@ async function carregarJogosAdmin() {
     msg('msgAdmin', err.message, 'error');
   }
 }
+
+function sairEdicaoJogo() {
+  jogoEmEdicaoId = null;
+  const titulo = document.getElementById('formJogoTitulo');
+  const btnSalvar = document.getElementById('btnSalvarJogo');
+  const btnCancelar = document.getElementById('btnCancelarEdicaoJogo');
+  if (titulo) titulo.innerHTML = '&#9917; Cadastrar jogo';
+  if (btnSalvar) btnSalvar.textContent = 'Cadastrar';
+  if (btnCancelar) btnCancelar.classList.add('hidden');
+}
+
+function editarJogo(id) {
+  const jogo = jogosAdminCache.find((item) => Number(item.id) === Number(id));
+  if (!jogo) {
+    msg('msgAdmin', 'Jogo não encontrado para edição.', 'error');
+    return;
+  }
+
+  jogoEmEdicaoId = Number(id);
+  document.getElementById('timeCasa').value = jogo.time_casa;
+  document.getElementById('timeFora').value = jogo.time_fora;
+  document.getElementById('dataJogo').value = valorDatetimeLocal(jogo.data_jogo);
+  document.getElementById('faseJogo').value = jogo.fase || 'fase_grupos';
+
+  const titulo = document.getElementById('formJogoTitulo');
+  const btnSalvar = document.getElementById('btnSalvarJogo');
+  const btnCancelar = document.getElementById('btnCancelarEdicaoJogo');
+  if (titulo) titulo.innerHTML = '&#9998; Editar jogo';
+  if (btnSalvar) btnSalvar.textContent = 'Salvar edição';
+  if (btnCancelar) btnCancelar.classList.remove('hidden');
+
+  location.hash = '#jogos';
+  document.getElementById('formJogo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+document.getElementById('btnCancelarEdicaoJogo')?.addEventListener('click', () => {
+  document.getElementById('formJogo')?.reset();
+  preencherSelecoesTimes();
+  sairEdicaoJogo();
+});
 
 async function liberarJogo(id, liberado) {
   try {
@@ -541,6 +596,7 @@ window.seedConquistasAdmin = seedConquistasAdmin;
 window.copiarPix = copiarPix;
 window.atualizarAposta = atualizarAposta;
 window.liberarJogo = liberarJogo;
+window.editarJogo = editarJogo;
 window.resultadoJogo = resultadoJogo;
 window.excluirJogo = excluirJogo;
 window.excluirTime = excluirTime;

@@ -77,7 +77,7 @@
     </section>
 
     <section class="form-panel admin-screen" data-admin-screen="jogos">
-      <div class="section-title"><h2>&#9917; Cadastrar jogo</h2></div>
+      <div class="section-title"><h2 id="formJogoTitulo">&#9917; Cadastrar jogo</h2></div>
       <form id="formJogo" class="form-grid">
         <label>Time casa<select id="timeCasa" required></select></label>
         <label>Time fora<select id="timeFora" required></select></label>
@@ -92,7 +92,8 @@
             <option value="final">Final</option>
           </select>
         </label>
-        <button class="primary">Cadastrar</button>
+        <button id="btnSalvarJogo" class="primary">Cadastrar</button>
+        <button id="btnCancelarEdicaoJogo" class="secondary hidden" type="button">Cancelar edi&ccedil;&atilde;o</button>
       </form>
     </section>
 

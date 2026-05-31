@@ -361,6 +361,47 @@ router.post('/jogos', async (req, res) => {
   } finally { if (conn) conn.release(); }
 });
 
+router.put('/jogos/:id', async (req, res) => {
+  const { time_casa, time_fora, data_jogo, fase = 'fase_grupos' } = req.body;
+  if (!time_casa || !time_fora || !data_jogo) {
+    return res.status(400).json({ message: 'Informe os times e a data do jogo.' });
+  }
+  if (String(time_casa).trim() === String(time_fora).trim()) {
+    return res.status(400).json({ message: 'Selecione dois times diferentes.' });
+  }
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await garantirTimes(conn);
+    const times = await conn.query('SELECT nome, codigo, escudo FROM times WHERE nome IN (?, ?)', [time_casa, time_fora]);
+    const timeCasaInfo = times.find((time) => String(time.nome).toLowerCase() === String(time_casa).toLowerCase());
+    const timeForaInfo = times.find((time) => String(time.nome).toLowerCase() === String(time_fora).toLowerCase());
+    const result = await conn.query(
+      `UPDATE jogos
+       SET time_casa = ?, time_fora = ?, data_jogo = ?, fase = ?,
+           codigo_casa = ?, codigo_fora = ?, bandeira_casa = ?, bandeira_fora = ?
+       WHERE id = ?`,
+      [
+        time_casa,
+        time_fora,
+        data_jogo,
+        fase,
+        timeCasaInfo?.codigo || null,
+        timeForaInfo?.codigo || null,
+        timeCasaInfo?.escudo || null,
+        timeForaInfo?.escudo || null,
+        req.params.id,
+      ]
+    );
+    if (!result.affectedRows) return res.status(404).json({ message: 'Jogo não encontrado.' });
+    res.json({ message: 'Jogo atualizado.' });
+  } catch (error) {
+    console.error('Erro ao atualizar jogo:', error);
+    res.status(500).json({ message: 'Erro ao atualizar jogo.' });
+  } finally { if (conn) conn.release(); }
+});
+
 router.put('/jogos/:id/liberar', async (req, res) => {
   const liberado = req.body.liberado ? 1 : 0;
   let conn;

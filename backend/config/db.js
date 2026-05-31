@@ -406,6 +406,21 @@ if (process.env.USE_MEMORY_DB === 'true') {
             return { affectedRows: jogo ? 1 : 0 };
           }
 
+          if (normalized.startsWith('UPDATE jogos SET time_casa = ?') || normalized.startsWith('UPDATE jogos SET time_casa = ?, time_fora = ?, data_jogo = ?, fase = ?')) {
+            const jogo = jogos.find((j) => j.id === Number(params[8]));
+            if (jogo) {
+              jogo.time_casa = params[0];
+              jogo.time_fora = params[1];
+              jogo.data_jogo = params[2];
+              jogo.fase = params[3] || 'fase_grupos';
+              jogo.codigo_casa = params[4] || null;
+              jogo.codigo_fora = params[5] || null;
+              jogo.bandeira_casa = params[6] || null;
+              jogo.bandeira_fora = params[7] || null;
+            }
+            return { affectedRows: jogo ? 1 : 0 };
+          }
+
           if (normalized.startsWith('DELETE FROM jogos WHERE id = ?')) {
             const jogoId = Number(params[0]);
             const index = jogos.findIndex((j) => j.id === jogoId);
