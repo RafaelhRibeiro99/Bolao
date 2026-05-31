@@ -18,6 +18,16 @@ function dinheiro(valor) {
   return `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`;
 }
 
+function formatarDataHoraJogo(valor) {
+  if (!valor) return '-';
+  const texto = String(valor);
+  const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}, ${match[4]}:${match[5]}`;
+  }
+  return texto;
+}
+
 function resultadoJogo(jogo) {
   if (jogo.status !== 'finalizado') return '';
   return `<span class="badge">Resultado: ${jogo.placar_casa ?? '-'} x ${jogo.placar_fora ?? '-'}</span>`;
@@ -94,7 +104,7 @@ async function carregarTransparencia() {
         <div class="section-title">
           <h2>${escapeHtml(jogo.time_casa)} x ${escapeHtml(jogo.time_fora)}</h2>
           <div class="actions">
-            <span class="badge">${new Date(jogo.data_jogo).toLocaleString('pt-BR')}</span>
+            <span class="badge">${formatarDataHoraJogo(jogo.data_jogo)}</span>
             ${resultadoJogo(jogo)}
           </div>
         </div>

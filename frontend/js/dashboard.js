@@ -4,6 +4,16 @@ function dinheiro(valor) {
   return `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`;
 }
 
+function formatarDataHoraJogo(valor) {
+  if (!valor) return '-';
+  const texto = String(valor);
+  const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}, ${match[4]}:${match[5]}`;
+  }
+  return texto;
+}
+
 function rewardClass(valor, prefixo) {
   const classe = String(valor || '');
   return classe.startsWith(prefixo) && /^[a-z0-9_]+$/.test(classe) ? classe : '';
@@ -87,7 +97,7 @@ function renderizarMinhasApostas() {
     <div class="bet-row ${classePalpite(palpite)}">
       <div>
         <strong>${palpite.time_casa} vs ${palpite.time_fora}</strong>
-        <small>${new Date(palpite.data_jogo).toLocaleString('pt-BR')}</small>
+        <small>${formatarDataHoraJogo(palpite.data_jogo)}</small>
       </div>
       <div><small>Codigo</small><strong class="bet-code">${palpite.codigo_aposta || '-'}</strong></div>
       <div><small>Palpite</small><strong>${palpite.palpite_casa} x ${palpite.palpite_fora}</strong></div>

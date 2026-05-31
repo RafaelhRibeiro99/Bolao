@@ -23,6 +23,16 @@ function dinheiro(valor) {
   return `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`;
 }
 
+function formatarDataHoraJogo(valor) {
+  if (!valor) return '-';
+  const texto = String(valor);
+  const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}, ${match[4]}:${match[5]}`;
+  }
+  return texto;
+}
+
 function barraTermometro(rotulo, percentual, classe) {
   return `
     <div class="thermo-row">
@@ -49,7 +59,7 @@ async function carregarJogos() {
         <article class="match-card">
           <div class="match-head">
             <span class="badge">${formatarFase(j.fase)}</span>
-            <span>${new Date(j.data_jogo).toLocaleString('pt-BR')}</span>
+            <span>${formatarDataHoraJogo(j.data_jogo)}</span>
           </div>
           <div class="match-teams">
             <span class="team-with-flag">

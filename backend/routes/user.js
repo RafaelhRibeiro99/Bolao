@@ -176,6 +176,23 @@ function apostasEncerradas(jogo) {
   return Date.now() >= limiteApostas;
 }
 
+function doisDigitos(valor) {
+  return String(valor).padStart(2, '0');
+}
+
+function formatarDataHoraLocal(valor) {
+  if (!(valor instanceof Date)) return valor;
+  return [
+    valor.getFullYear(),
+    doisDigitos(valor.getMonth() + 1),
+    doisDigitos(valor.getDate()),
+  ].join('-') + ` ${doisDigitos(valor.getHours())}:${doisDigitos(valor.getMinutes())}:${doisDigitos(valor.getSeconds())}`;
+}
+
+function serializarJogoData(row) {
+  return row?.data_jogo ? { ...row, data_jogo: formatarDataHoraLocal(row.data_jogo) } : row;
+}
+
 function jogoComStatusApostas(jogo) {
   const encerradas = apostasEncerradas(jogo);
   return {
@@ -228,7 +245,7 @@ async function enriquecerJogo(conn, jogo) {
   const timeCasaInfo = times.find((time) => String(time.nome).toLowerCase() === String(jogo.time_casa).toLowerCase());
   const timeForaInfo = times.find((time) => String(time.nome).toLowerCase() === String(jogo.time_fora).toLowerCase());
   return {
-    ...jogoComStatusApostas(jogo),
+    ...serializarJogoData(jogoComStatusApostas(jogo)),
     codigo_casa: jogo.codigo_casa || timeCasaInfo?.codigo || null,
     codigo_fora: jogo.codigo_fora || timeForaInfo?.codigo || null,
     escudo_casa: jogo.bandeira_casa || timeCasaInfo?.escudo || null,
@@ -546,7 +563,7 @@ router.get('/transparencia', auth, async (req, res) => {
         id: jogo.id,
         time_casa: jogo.time_casa,
         time_fora: jogo.time_fora,
-        data_jogo: jogo.data_jogo,
+        data_jogo: formatarDataHoraLocal(jogo.data_jogo),
         status: jogo.status,
         jogo_validado: Number(jogo.jogo_validado || 0),
         placar_casa: jogo.placar_casa,
@@ -613,6 +630,7 @@ router.get('/meus-palpites', auth, async (req, res) => {
         && !vencedor;
       return {
         ...palpite,
+        data_jogo: formatarDataHoraLocal(palpite.data_jogo),
         vencedor,
         perdedor,
         premio: vencedor ? premioPorJogo.get(Number(palpite.jogo_id)) || 0 : 0,

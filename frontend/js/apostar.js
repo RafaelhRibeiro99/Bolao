@@ -1,5 +1,15 @@
 protegerPagina(false);
 
+function formatarDataHoraJogo(valor) {
+  if (!valor) return '-';
+  const texto = String(valor);
+  const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}, ${match[4]}:${match[5]}`;
+  }
+  return texto;
+}
+
 const params = new URLSearchParams(location.search);
 const jogoId = params.get('jogo');
 let jogoAtual = null;
@@ -38,7 +48,7 @@ async function carregarJogo() {
     jogoAtual = await request(`/jogos/${jogoId}`);
     document.getElementById('jogoInfo').innerHTML = `
       <div class="match-teams">${jogoAtual.time_casa}<span class="vs">VS</span>${jogoAtual.time_fora}</div>
-      <p class="text-muted">Data: ${new Date(jogoAtual.data_jogo).toLocaleString('pt-BR')}</p>
+      <p class="text-muted">Data: ${formatarDataHoraJogo(jogoAtual.data_jogo)}</p>
       <p><span class="badge">Valor: R$ 5,00</span> <span class="${jogoAtual.aberto_para_apostas ? 'badge' : 'status-badge pendente'}">${jogoAtual.aberto_para_apostas ? 'Apostas liberadas' : 'Apostas encerradas'}</span></p>
       <p class="text-muted">Limite: 10 minutos antes do jogo</p>
     `;

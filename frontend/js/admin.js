@@ -24,6 +24,16 @@ function escapeJsString(valor) {
   return String(valor ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
+function formatarDataHoraJogo(valor) {
+  if (!valor) return '-';
+  const texto = String(valor);
+  const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}, ${match[4]}:${match[5]}`;
+  }
+  return texto;
+}
+
 function arquivoPngParaDataUrl(file) {
   return new Promise((resolve, reject) => {
     if (!file) return resolve(null);
@@ -164,7 +174,7 @@ async function carregarTransparenciaAdmin() {
         <div class="section-title">
           <h2>${escapeHtml(jogo.time_casa)} x ${escapeHtml(jogo.time_fora)}</h2>
           <div class="actions">
-            <span class="badge">${new Date(jogo.data_jogo).toLocaleString('pt-BR')}</span>
+            <span class="badge">${formatarDataHoraJogo(jogo.data_jogo)}</span>
             ${resultadoTransparenciaAdmin(jogo)}
           </div>
         </div>
@@ -433,7 +443,7 @@ async function carregarJogosAdmin() {
       <tr>
         <td>${escapeHtml(j.time_casa)} x ${escapeHtml(j.time_fora)}</td>
         <td>${formatarFase(j.fase)}</td>
-        <td>${new Date(j.data_jogo).toLocaleString('pt-BR')}</td>
+        <td>${formatarDataHoraJogo(j.data_jogo)}</td>
         <td>${j.status}</td>
         <td><span class="status-badge ${j.liberado_palpite ? 'pago' : 'pendente'}">${j.liberado_palpite ? 'Sim' : 'Não'}</span></td>
         <td>${formatarResultadoAdmin(j)}</td>

@@ -128,6 +128,23 @@ function salvarEscudoPng(nome, escudoPng) {
   return `/assets/times/${filename}`;
 }
 
+function doisDigitos(valor) {
+  return String(valor).padStart(2, '0');
+}
+
+function formatarDataHoraLocal(valor) {
+  if (!(valor instanceof Date)) return valor;
+  return [
+    valor.getFullYear(),
+    doisDigitos(valor.getMonth() + 1),
+    doisDigitos(valor.getDate()),
+  ].join('-') + ` ${doisDigitos(valor.getHours())}:${doisDigitos(valor.getMinutes())}:${doisDigitos(valor.getSeconds())}`;
+}
+
+function serializarJogoData(row) {
+  return row?.data_jogo ? { ...row, data_jogo: formatarDataHoraLocal(row.data_jogo) } : row;
+}
+
 router.get('/conquistas', async (_req, res) => {
   res.json(CONQUISTAS);
 });
@@ -146,7 +163,7 @@ router.get('/usuarios', async (_req, res) => {
   try {
     conn = await pool.getConnection();
     const rows = await conn.query('SELECT id, nome, email, whatsapp, tipo, pix_chave, criado_em FROM usuarios ORDER BY criado_em DESC');
-    res.json(rows);
+    res.json(rows.map(serializarJogoData));
   } catch {
     res.status(500).json({ message: 'Erro ao listar usuários.' });
   } finally { if (conn) conn.release(); }
@@ -217,7 +234,7 @@ router.get('/times', async (_req, res) => {
     conn = await pool.getConnection();
     await garantirTimes(conn);
     const rows = await conn.query('SELECT id, nome, codigo, escudo, criado_em FROM times ORDER BY nome ASC');
-    res.json(rows);
+    res.json(rows.map(serializarJogoData));
   } catch (error) {
     console.error('Erro ao listar times:', error);
     res.status(500).json({ message: 'Erro ao listar times.' });
