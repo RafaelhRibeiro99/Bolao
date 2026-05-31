@@ -172,6 +172,9 @@ function dataJogoMs(dataJogo) {
 }
 
 function apostasEncerradas(jogo) {
+  if (Number(jogo?.liberado_palpite || 0) === 1 && ['aberto', 'fechado'].includes(jogo?.status)) {
+    return false;
+  }
   const limiteApostas = dataJogoMs(jogo.data_jogo) - (10 * 60 * 1000);
   return Date.now() >= limiteApostas;
 }

@@ -381,6 +381,7 @@ router.put('/jogos/:id', async (req, res) => {
       `UPDATE jogos
        SET time_casa = ?, time_fora = ?, data_jogo = ?, fase = ?,
            codigo_casa = ?, codigo_fora = ?, bandeira_casa = ?, bandeira_fora = ?,
+           placar_casa = NULL, placar_fora = NULL, penaltis_casa = NULL, penaltis_fora = NULL,
            status = "aberto", liberado_palpite = 1, jogo_validado = 0
        WHERE id = ?`,
       [

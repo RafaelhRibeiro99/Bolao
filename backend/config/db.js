@@ -417,6 +417,10 @@ if (process.env.USE_MEMORY_DB === 'true') {
               jogo.codigo_fora = params[5] || null;
               jogo.bandeira_casa = params[6] || null;
               jogo.bandeira_fora = params[7] || null;
+              jogo.placar_casa = null;
+              jogo.placar_fora = null;
+              jogo.penaltis_casa = null;
+              jogo.penaltis_fora = null;
               jogo.status = 'aberto';
               jogo.liberado_palpite = 1;
               jogo.jogo_validado = 0;
