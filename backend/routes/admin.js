@@ -474,7 +474,7 @@ router.post('/jogos/:id/calcular', async (req, res) => {
 
     const jogo = jogos[0];
     const maxPontos = Math.max(0, ...[...pontosPorPalpite.values()]);
-    const semVencedor = maxPontos <= 0;
+    const semVencedor = maxPontos < 10;
     const isFinal = jogo.fase === 'final';
     const totalApostas = palpites.length;
     const arrecadado = totalApostas * 5;

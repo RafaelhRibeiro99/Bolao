@@ -209,7 +209,8 @@ function palpiteVencedor(jogo, palpite) {
   return jogo.status === 'finalizado'
     && Number(jogo.jogo_validado || 0) === 1
     && palpite.status_aposta === 'aprovado'
-    && Number(palpite.pontos || 0) > 0;
+    && Number(jogo.placar_casa) === Number(palpite.palpite_casa)
+    && Number(jogo.placar_fora) === Number(palpite.palpite_fora);
 }
 
 async function garantirMotivoReprovacao(conn) {
@@ -722,12 +723,7 @@ router.get('/vencedores', auth, async (_req, res) => {
       INNER JOIN jogos j ON j.id = p.jogo_id
       WHERE p.status_aposta = "aprovado"
         AND j.status = "finalizado"
-        AND p.pontos > 0
-        AND p.pontos = (
-          SELECT MAX(p2.pontos)
-          FROM palpites p2
-          WHERE p2.jogo_id = p.jogo_id AND p2.status_aposta = "aprovado"
-        )
+        AND p.pontos = 10
         AND (
           SELECT COUNT(DISTINCT p3.usuario_id)
           FROM palpites p3

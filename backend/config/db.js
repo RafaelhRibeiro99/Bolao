@@ -582,7 +582,7 @@ if (process.env.USE_MEMORY_DB === 'true') {
 
           if (normalized.startsWith('SELECT p.*, u.nome, u.nome_exibicao')) {
             return palpites
-              .filter((p) => p.status_aposta === 'aprovado' && p.pontos > 0 && isValidatedGame(p.jogo_id) && p.pontos === maxPointsForGame(p.jogo_id))
+              .filter((p) => p.status_aposta === 'aprovado' && p.pontos === 10 && isValidatedGame(p.jogo_id))
               .map((p) => {
                 const user = usuarios.find((u) => u.id === p.usuario_id);
                 const jogo = jogos.find((j) => j.id === p.jogo_id);

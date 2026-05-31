@@ -143,13 +143,13 @@ async function carregarMetricas() {
   meusPalpitesCache = rows;
   const total = rows.length;
   const aprovadas = rows.filter(p => p.status_aposta === 'aprovado').length;
-  const pontos = rows.reduce((sum, p) => sum + Number(p.pontos || 0), 0);
+  const ganhos = rows.reduce((sum, p) => sum + Number(p.premio || 0), 0);
   const acertos = rows.filter(p => Number(p.pontos || 0) > 0).length;
 
   document.getElementById('totalApostas').textContent = `⚽ ${total}`;
   document.getElementById('totalAprovadas').textContent = `🔥 ${aprovadas}`;
   document.getElementById('totalApostado').textContent = `💰 ${dinheiro(aprovadas * 5)}`;
-  document.getElementById('totalGanho').textContent = `🏆 ${dinheiro(pontos * 4)}`;
+  document.getElementById('totalGanho').textContent = `🏆 ${dinheiro(ganhos)}`;
   document.getElementById('taxaAcerto').textContent = `🎯 ${total ? Math.round((acertos / total) * 100) : 0}%`;
   renderizarMinhasApostas();
 }

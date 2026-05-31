@@ -370,7 +370,7 @@ async function carregarApostasAdmin() {
       const vencedor = a.status_jogo === 'finalizado'
         && Number(a.jogo_validado || 0) === 1
         && a.status_aposta === 'aprovado'
-        && Number(a.pontos || 0) > 0;
+        && Number(a.pontos || 0) === 10;
       return `
       <tr>
         <td><strong class="bet-code">${vencedor ? '🏆 ' : ''}${escapeHtml(a.codigo_aposta || '-')}</strong></td>
