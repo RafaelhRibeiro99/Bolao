@@ -14,6 +14,13 @@ function formatarDataHoraJogo(valor) {
   return texto;
 }
 
+function dataJogoPtBr(valor) {
+  const texto = String(valor || '');
+  const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+  return '';
+}
+
 function rewardClass(valor, prefixo) {
   const classe = String(valor || '');
   return classe.startsWith(prefixo) && /^[a-z0-9_]+$/.test(classe) ? classe : '';
@@ -150,7 +157,7 @@ async function carregarMetricas() {
 async function carregarResumoJogos() {
   const jogos = await request('/jogos');
   const hoje = new Date().toLocaleDateString('pt-BR');
-  const jogosHoje = jogos.filter(j => new Date(j.data_jogo).toLocaleDateString('pt-BR') === hoje);
+  const jogosHoje = jogos.filter(j => dataJogoPtBr(j.data_jogo) === hoje);
   document.getElementById('jogosHoje').innerHTML = (jogosHoje.length ? jogosHoje : jogos.slice(0, 3)).map(j => `
     <div class="mini-row">
       <strong>

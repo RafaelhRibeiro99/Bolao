@@ -1,5 +1,8 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 require('dotenv').config();
+
+// TIMESTAMP sem timezone deve sair exatamente como foi cadastrado no banco.
+types.setTypeParser(1114, (value) => value);
 
 function convertPlaceholders(sql) {
   let index = 0;
