@@ -5,9 +5,13 @@ const { calcularPontos } = require('../services/pontuacao');
 const { processAchievements } = require('../services/achievementEngine');
 const { CONQUISTAS } = require('../services/conquistas');
 const { seedConquistas } = require('../scripts/seed-conquistas');
+const fs = require('fs');
+const path = require('path');
 
 const router = express.Router();
 router.use(auth, adminOnly);
+
+const ESCUDOS_DIR = path.join(__dirname, '../../frontend/assets/times');
 
 const TIMES_PADRAO = [
   'África do Sul',
@@ -90,6 +94,38 @@ async function garantirTimes(conn) {
       await conn.query('INSERT INTO times (nome) VALUES (?)', [nome]);
     }
   }
+}
+
+function slugTime(nome) {
+  return String(nome || 'time')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60) || 'time';
+}
+
+function salvarEscudoPng(nome, escudoPng) {
+  if (!escudoPng) return null;
+  const match = String(escudoPng).match(/^data:image\/png;base64,([a-zA-Z0-9+/=]+)$/);
+  if (!match) {
+    const error = new Error('Envie um arquivo PNG válido para o escudo.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const buffer = Buffer.from(match[1], 'base64');
+  if (buffer.length > 2 * 1024 * 1024) {
+    const error = new Error('O PNG do escudo deve ter no máximo 2 MB.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  fs.mkdirSync(ESCUDOS_DIR, { recursive: true });
+  const filename = `${slugTime(nome)}-${Date.now()}.png`;
+  fs.writeFileSync(path.join(ESCUDOS_DIR, filename), buffer);
+  return `/assets/times/${filename}`;
 }
 
 router.get('/conquistas', async (_req, res) => {
@@ -191,7 +227,6 @@ router.get('/times', async (_req, res) => {
 router.post('/times', async (req, res) => {
   const nome = String(req.body.nome || '').trim();
   const codigo = String(req.body.codigo || '').trim().toUpperCase() || null;
-  const escudo = String(req.body.escudo || '').trim() || null;
   if (!nome) {
     return res.status(400).json({ message: 'Informe o nome do time.' });
   }
@@ -200,6 +235,12 @@ router.post('/times', async (req, res) => {
   }
   if (codigo && codigo.length > 10) {
     return res.status(400).json({ message: 'O código deve ter no máximo 10 caracteres.' });
+  }
+  let escudo;
+  try {
+    escudo = salvarEscudoPng(nome, req.body.escudo_png) || String(req.body.escudo || '').trim() || null;
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({ message: error.message });
   }
 
   let conn;
@@ -215,6 +256,32 @@ router.post('/times', async (req, res) => {
   } catch (error) {
     console.error('Erro ao cadastrar time:', error);
     res.status(500).json({ message: 'Erro ao cadastrar time.' });
+  } finally { if (conn) conn.release(); }
+});
+
+router.put('/times/:id', async (req, res) => {
+  const nome = String(req.body.nome || '').trim();
+  const codigo = req.body.codigo === undefined ? undefined : String(req.body.codigo || '').trim().toUpperCase();
+  const escudoManual = req.body.escudo === undefined ? undefined : String(req.body.escudo || '').trim();
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await garantirTimes(conn);
+    const rows = await conn.query('SELECT id, nome, codigo, escudo FROM times WHERE id = ?', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ message: 'Time não encontrado.' });
+
+    const atual = rows[0];
+    const nomeFinal = nome || atual.nome;
+    const codigoFinal = codigo === undefined ? atual.codigo : (codigo || null);
+    const escudoPng = salvarEscudoPng(nomeFinal, req.body.escudo_png);
+    const escudoFinal = escudoPng || (escudoManual === undefined ? atual.escudo : (escudoManual || null));
+
+    await conn.query('UPDATE times SET nome = ?, codigo = ?, escudo = ? WHERE id = ?', [nomeFinal, codigoFinal, escudoFinal, req.params.id]);
+    res.json({ message: 'Time atualizado.', escudo: escudoFinal });
+  } catch (error) {
+    console.error('Erro ao atualizar time:', error);
+    res.status(error.statusCode || 500).json({ message: error.message || 'Erro ao atualizar time.' });
   } finally { if (conn) conn.release(); }
 });
 
@@ -254,9 +321,22 @@ router.post('/jogos', async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
+    await garantirTimes(conn);
+    const times = await conn.query('SELECT nome, codigo, escudo FROM times WHERE nome IN (?, ?)', [time_casa, time_fora]);
+    const timeCasaInfo = times.find((time) => String(time.nome).toLowerCase() === String(time_casa).toLowerCase());
+    const timeForaInfo = times.find((time) => String(time.nome).toLowerCase() === String(time_fora).toLowerCase());
     await conn.query(
-      'INSERT INTO jogos (time_casa, time_fora, data_jogo, fase, status, liberado_palpite) VALUES (?, ?, ?, ?, "aberto", 0)',
-      [time_casa, time_fora, data_jogo, fase]
+      'INSERT INTO jogos (time_casa, time_fora, data_jogo, fase, status, liberado_palpite, codigo_casa, codigo_fora, bandeira_casa, bandeira_fora) VALUES (?, ?, ?, ?, "aberto", 0, ?, ?, ?, ?)',
+      [
+        time_casa,
+        time_fora,
+        data_jogo,
+        fase,
+        timeCasaInfo?.codigo || null,
+        timeForaInfo?.codigo || null,
+        timeCasaInfo?.escudo || null,
+        timeForaInfo?.escudo || null,
+      ]
     );
     res.status(201).json({ message: 'Jogo criado.' });
   } catch {

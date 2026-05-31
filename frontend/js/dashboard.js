@@ -145,12 +145,12 @@ async function carregarResumoJogos() {
     <div class="mini-row">
       <strong>
         <span class="team-with-flag">
-          ${obterUrlBandeira(j.time_casa) ? `<img src="${obterUrlBandeira(j.time_casa)}" alt="${j.time_casa}" class="flag-small">` : ''}
+          ${(j.escudo_casa || obterUrlBandeira(j.time_casa)) ? `<img src="${j.escudo_casa || obterUrlBandeira(j.time_casa)}" alt="${j.time_casa}" class="flag-small">` : ''}
           ${j.time_casa}
         </span>
         <span class="vs">VS</span>
         <span class="team-with-flag">
-          ${obterUrlBandeira(j.time_fora) ? `<img src="${obterUrlBandeira(j.time_fora)}" alt="${j.time_fora}" class="flag-small">` : ''}
+          ${(j.escudo_fora || obterUrlBandeira(j.time_fora)) ? `<img src="${j.escudo_fora || obterUrlBandeira(j.time_fora)}" alt="${j.time_fora}" class="flag-small">` : ''}
           ${j.time_fora}
         </span>
       </strong>

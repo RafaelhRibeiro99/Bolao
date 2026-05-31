@@ -38,8 +38,8 @@ async function carregarJogos() {
     const jogos = await request('/jogos');
     document.getElementById('listaJogos').innerHTML = jogos.map(j => {
       const aberto = Boolean(j.aberto_para_apostas);
-      const bandeiraCasa = obterUrlBandeira(j.time_casa);
-      const bandeiraFora = obterUrlBandeira(j.time_fora);
+      const bandeiraCasa = j.escudo_casa || obterUrlBandeira(j.time_casa);
+      const bandeiraFora = j.escudo_fora || obterUrlBandeira(j.time_fora);
       const estatisticas = j.estatisticas || {};
       const termometro = estatisticas.termometro || { casa: 0, empate: 0, fora: 0 };
       const statusApostas = aberto

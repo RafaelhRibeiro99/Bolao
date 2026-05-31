@@ -224,8 +224,15 @@ function estatisticasPalpitesJogo(palpites) {
 
 async function enriquecerJogo(conn, jogo) {
   const palpites = await conn.query('SELECT * FROM palpites WHERE jogo_id = ? AND status_aposta = "aprovado"', [jogo.id]);
+  const times = await conn.query('SELECT nome, codigo, escudo FROM times WHERE nome IN (?, ?)', [jogo.time_casa, jogo.time_fora]).catch(() => []);
+  const timeCasaInfo = times.find((time) => String(time.nome).toLowerCase() === String(jogo.time_casa).toLowerCase());
+  const timeForaInfo = times.find((time) => String(time.nome).toLowerCase() === String(jogo.time_fora).toLowerCase());
   return {
     ...jogoComStatusApostas(jogo),
+    codigo_casa: jogo.codigo_casa || timeCasaInfo?.codigo || null,
+    codigo_fora: jogo.codigo_fora || timeForaInfo?.codigo || null,
+    escudo_casa: jogo.bandeira_casa || timeCasaInfo?.escudo || null,
+    escudo_fora: jogo.bandeira_fora || timeForaInfo?.escudo || null,
     estatisticas: estatisticasPalpitesJogo(palpites),
   };
 }

@@ -184,6 +184,19 @@ if (process.env.USE_MEMORY_DB === 'true') {
             return [...times].sort((a, b) => a.nome.localeCompare(b.nome));
           }
 
+          if (normalized.startsWith('SELECT nome, codigo, escudo FROM times WHERE nome IN')) {
+            const nomes = params.map((nome) => String(nome).toLowerCase());
+            return times
+              .filter((time) => nomes.includes(time.nome.toLowerCase()))
+              .map((time) => ({ nome: time.nome, codigo: time.codigo, escudo: time.escudo }));
+          }
+
+          if (normalized.startsWith('SELECT id, nome, codigo, escudo FROM times WHERE id = ?')) {
+            return times
+              .filter((time) => time.id === Number(params[0]))
+              .map((time) => ({ id: time.id, nome: time.nome, codigo: time.codigo, escudo: time.escudo }));
+          }
+
           if (normalized.startsWith('INSERT INTO times')) {
             const nome = String(params[0] || '').trim();
             const existente = times.find((time) => time.nome.toLowerCase() === nome.toLowerCase());
@@ -196,6 +209,16 @@ if (process.env.USE_MEMORY_DB === 'true') {
               criado_em: new Date(),
             });
             return { affectedRows: 1 };
+          }
+
+          if (normalized.startsWith('UPDATE times SET nome = ?, codigo = ?, escudo = ? WHERE id = ?')) {
+            const time = times.find((item) => item.id === Number(params[3]));
+            if (time) {
+              time.nome = params[0];
+              time.codigo = params[1] || null;
+              time.escudo = params[2] || null;
+            }
+            return { affectedRows: time ? 1 : 0 };
           }
 
           if (normalized.startsWith('DELETE FROM times WHERE id = ?')) {
@@ -348,12 +371,17 @@ if (process.env.USE_MEMORY_DB === 'true') {
           }
 
           if (normalized.startsWith('INSERT INTO jogos')) {
+            const extendedInsert = normalized.includes('codigo_casa') && params.length >= 8;
             jogos.push({
               id: nextGameId++,
               time_casa: params[0],
               time_fora: params[1],
               data_jogo: params[2],
               fase: params[3] || 'fase_grupos',
+              codigo_casa: extendedInsert ? params[4] : null,
+              codigo_fora: extendedInsert ? params[5] : null,
+              bandeira_casa: extendedInsert ? params[6] : null,
+              bandeira_fora: extendedInsert ? params[7] : null,
               placar_casa: null,
               placar_fora: null,
               penaltis_casa: null,

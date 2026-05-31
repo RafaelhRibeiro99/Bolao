@@ -138,6 +138,13 @@ button {
   gap: 12px;
 }
 
+.team-admin-crest {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  display: block;
+}
+
 .container {
   width: min(1180px, calc(100% - 28px));
   margin: 0 auto;

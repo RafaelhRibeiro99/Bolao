@@ -24,6 +24,19 @@ function escapeJsString(valor) {
   return String(valor ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
+function arquivoPngParaDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) return resolve(null);
+    if (file.type !== 'image/png') return reject(new Error('Selecione um arquivo PNG.'));
+    if (file.size > 2 * 1024 * 1024) return reject(new Error('O PNG do escudo deve ter no máximo 2 MB.'));
+
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Não foi possível ler o arquivo PNG.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 let timesAdminCache = [];
 let apostasAdminCache = [];
 
@@ -240,8 +253,12 @@ async function carregarTimesAdmin() {
       <tr>
         <td>${escapeHtml(time.nome)}</td>
         <td>${time.codigo ? escapeHtml(time.codigo) : '<span class="text-muted">Não informado</span>'}</td>
-        <td>${time.escudo ? escapeHtml(time.escudo) : '<span class="text-muted">Não informado</span>'}</td>
-        <td><button class="danger" onclick="excluirTime(${time.id})">Excluir</button></td>
+        <td>${time.escudo ? `<img src="${escapeHtml(time.escudo)}" alt="${escapeHtml(time.nome)}" class="team-admin-crest">` : '<span class="text-muted">Não informado</span>'}</td>
+        <td>
+          <input id="escudoUpload${time.id}" class="hidden" type="file" accept="image/png" onchange="trocarEscudoTime(${time.id}, this)">
+          <button class="secondary" type="button" onclick="document.getElementById('escudoUpload${time.id}').click()">PNG</button>
+          <button class="danger" onclick="excluirTime(${time.id})">Excluir</button>
+        </td>
       </tr>
     `).join('') || '<tr><td colspan="4">Nenhum time cadastrado.</td></tr>';
   } catch (err) {
@@ -253,14 +270,18 @@ document.getElementById('formTime')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const nome = document.getElementById('nomeTime').value.trim();
   const codigo = document.getElementById('codigoTime').value.trim();
-  const escudo = document.getElementById('escudoTime').value.trim();
+  const escudo_png = await arquivoPngParaDataUrl(document.getElementById('escudoTime').files[0]).catch((err) => {
+    msg('msgAdmin', err.message, 'error');
+    return undefined;
+  });
+  if (escudo_png === undefined) return;
   if (!nome) {
     msg('msgAdmin', 'Informe o nome do time.', 'error');
     return;
   }
 
   try {
-    await request('/admin/times', { method: 'POST', body: JSON.stringify({ nome, codigo, escudo }) });
+    await request('/admin/times', { method: 'POST', body: JSON.stringify({ nome, codigo, escudo_png }) });
     msg('msgAdmin', 'Time cadastrado com sucesso.');
     e.target.reset();
     await carregarTimesAdmin();
@@ -268,6 +289,25 @@ document.getElementById('formTime')?.addEventListener('submit', async (e) => {
     msg('msgAdmin', err.message, 'error');
   }
 });
+
+async function trocarEscudoTime(id, input) {
+  const escudo_png = await arquivoPngParaDataUrl(input.files[0]).catch((err) => {
+    msg('msgAdmin', err.message, 'error');
+    input.value = '';
+    return undefined;
+  });
+  if (escudo_png === undefined) return;
+
+  try {
+    await request(`/admin/times/${id}`, { method: 'PUT', body: JSON.stringify({ escudo_png }) });
+    msg('msgAdmin', 'Escudo atualizado com sucesso.');
+    await carregarTimesAdmin();
+  } catch (err) {
+    msg('msgAdmin', err.message, 'error');
+  } finally {
+    input.value = '';
+  }
+}
 
 async function carregarUsuarios() {
   try {
@@ -494,4 +534,5 @@ window.liberarJogo = liberarJogo;
 window.resultadoJogo = resultadoJogo;
 window.excluirJogo = excluirJogo;
 window.excluirTime = excluirTime;
+window.trocarEscudoTime = trocarEscudoTime;
 

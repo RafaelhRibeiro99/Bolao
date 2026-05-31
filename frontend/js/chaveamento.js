@@ -64,8 +64,8 @@ function renderJogo(jogo, fase) {
       <div class="bracket-team"><span>A definir</span><strong>-</strong></div>
     </article>
   `;
-  const bandeiraCasa = obterUrlBandeira(jogo.time_casa);
-  const bandeiraFora = obterUrlBandeira(jogo.time_fora);
+  const bandeiraCasa = jogo.escudo_casa || obterUrlBandeira(jogo.time_casa);
+  const bandeiraFora = jogo.escudo_fora || obterUrlBandeira(jogo.time_fora);
   const invalido = jogo.chaveamento_valido === false;
   return `
     <article class="bracket-match ${invalido ? 'bracket-invalid' : ''}" ${invalido ? `title="${jogo.chaveamento_erro || 'Jogo fora do encaixe esperado do chaveamento.'}"` : ''}>
@@ -106,8 +106,8 @@ function renderFinal(jogo, premios) {
       </div>
     `;
   }
-  const bandeiraCasa = obterUrlBandeira(jogo.time_casa);
-  const bandeiraFora = obterUrlBandeira(jogo.time_fora);
+  const bandeiraCasa = jogo.escudo_casa || obterUrlBandeira(jogo.time_casa);
+  const bandeiraFora = jogo.escudo_fora || obterUrlBandeira(jogo.time_fora);
   return `
     <div class="final-card">
       <img class="bracket-trophy" src="/assets/trophy-login.png" alt="Trof&eacute;u">
