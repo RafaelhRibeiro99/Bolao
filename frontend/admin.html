@@ -130,15 +130,24 @@
       </div>
       <div id="relatoriosAdminMsg"></div>
       <section class="data-section">
-        <div class="section-title"><h2>Ganhadores por jogo</h2></div>
+        <div class="section-title">
+          <h2>Ganhadores por jogo</h2>
+          <button class="secondary" type="button" onclick="gerarPdfRelatorio('ganhadores')">Gerar PDF</button>
+        </div>
         <div id="relatorioGanhadores"></div>
       </section>
       <section class="data-section">
-        <div class="section-title"><h2>Todas as apostas por jogo</h2></div>
+        <div class="section-title">
+          <h2>Todas as apostas por jogo</h2>
+          <button class="secondary" type="button" onclick="gerarPdfRelatorio('apostas')">Gerar PDF</button>
+        </div>
         <div id="relatorioApostas"></div>
       </section>
       <section class="data-section">
-        <div class="section-title"><h2>Financeiro</h2></div>
+        <div class="section-title">
+          <h2>Financeiro</h2>
+          <button class="secondary" type="button" onclick="gerarPdfRelatorio('financeiro')">Gerar PDF</button>
+        </div>
         <div id="relatorioFinanceiro"></div>
       </section>
     </section>

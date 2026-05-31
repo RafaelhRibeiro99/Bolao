@@ -60,6 +60,7 @@ let apostasAdminCache = [];
 let jogosAdminCache = [];
 let jogoEmEdicaoId = null;
 let jogoApostasModalId = null;
+let relatoriosAdminCache = null;
 
 function telaAdminAtual() {
   const tela = String(location.hash || '#usuarios').replace('#', '');
@@ -305,9 +306,110 @@ function tabelaFinanceiroRelatorio(data) {
   `;
 }
 
+function resumoRelatorioHtml(data, tipo) {
+  const jogos = data?.jogos || [];
+  const total = data?.total_geral || {};
+  const ganhadores = jogos.reduce((sum, jogo) => sum + (jogo.ganhadores?.length || 0), 0);
+  const valorReceber = jogos.reduce((sum, jogo) => sum + (jogo.financeiro?.valor_a_pagar || 0), 0);
+  const titulo = {
+    ganhadores: 'Resumo dos ganhadores',
+    apostas: 'Resumo das apostas',
+    financeiro: 'Resumo financeiro',
+  }[tipo] || 'Resumo';
+
+  return `
+    <section class="pdf-summary">
+      <h2>${titulo}</h2>
+      <div class="pdf-summary-grid">
+        <div><small>Jogos</small><strong>${jogos.length}</strong></div>
+        <div><small>Apostas</small><strong>${total.total_apostas || 0}</strong></div>
+        <div><small>Aprovadas</small><strong>${total.total_aprovadas || 0}</strong></div>
+        <div><small>Ganhadores</small><strong>${ganhadores}</strong></div>
+        <div><small>Total arrecadado</small><strong>${dinheiroAdmin(total.arrecadado)}</strong></div>
+        <div><small>Parte a pagar</small><strong>${dinheiroAdmin(valorReceber)}</strong></div>
+        <div><small>Recebido plataforma</small><strong>${dinheiroAdmin(total.plataforma)}</strong></div>
+      </div>
+    </section>
+  `;
+}
+
+function htmlPdfRelatorio(data, tipo) {
+  const jogos = data?.jogos || [];
+  const titulo = {
+    ganhadores: 'Relatório de ganhadores por jogo',
+    apostas: 'Relatório de todas as apostas por jogo',
+    financeiro: 'Relatório financeiro',
+  }[tipo] || 'Relatório';
+  const conteudo = {
+    ganhadores: jogos.map(tabelaGanhadoresRelatorio).join('') || '<p>Nenhum jogo cadastrado.</p>',
+    apostas: jogos.map(tabelaApostasRelatorio).join('') || '<p>Nenhum jogo cadastrado.</p>',
+    financeiro: tabelaFinanceiroRelatorio(data),
+  }[tipo];
+
+  return `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <title>${titulo}</title>
+      <style>
+        * { box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #111827; margin: 24px; }
+        h1 { margin: 0 0 6px; font-size: 24px; }
+        h2 { margin: 18px 0 10px; font-size: 18px; }
+        h3 { margin: 0 0 8px; font-size: 15px; }
+        .meta { color: #4b5563; margin-bottom: 18px; }
+        .pdf-summary { border: 1px solid #d1d5db; padding: 12px; margin-bottom: 18px; }
+        .pdf-summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .pdf-summary-grid div { border: 1px solid #e5e7eb; padding: 8px; }
+        small { display: block; color: #6b7280; font-size: 11px; }
+        strong { font-weight: 700; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0 18px; font-size: 11px; }
+        th, td { border: 1px solid #d1d5db; padding: 6px; text-align: left; vertical-align: top; }
+        th { background: #f3f4f6; }
+        article, .data-section { page-break-inside: avoid; margin-bottom: 16px; }
+        .badge, .status-badge, .text-muted { color: #374151; }
+        .table-wrap { overflow: visible; }
+        @page { size: A4 landscape; margin: 12mm; }
+      </style>
+    </head>
+    <body>
+      <h1>${titulo}</h1>
+      <div class="meta">Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+      ${resumoRelatorioHtml(data, tipo)}
+      ${conteudo}
+      <script>window.addEventListener('load', () => { window.print(); });</script>
+    </body>
+    </html>
+  `;
+}
+
+async function obterRelatoriosAdmin() {
+  if (relatoriosAdminCache) return relatoriosAdminCache;
+  relatoriosAdminCache = await request('/admin/relatorios');
+  return relatoriosAdminCache;
+}
+
+async function gerarPdfRelatorio(tipo) {
+  try {
+    const data = await obterRelatoriosAdmin();
+    const janela = window.open('', '_blank');
+    if (!janela) {
+      msg('relatoriosAdminMsg', 'Permita popups para gerar o PDF.', 'error');
+      return;
+    }
+    janela.document.open();
+    janela.document.write(htmlPdfRelatorio(data, tipo));
+    janela.document.close();
+  } catch (err) {
+    msg('relatoriosAdminMsg', err.message, 'error');
+  }
+}
+
 async function carregarRelatoriosAdmin() {
   try {
     const data = await request('/admin/relatorios');
+    relatoriosAdminCache = data;
     const jogos = data.jogos || [];
     document.getElementById('relatorioGanhadores').innerHTML = jogos.map(tabelaGanhadoresRelatorio).join('') || '<p class="text-muted">Nenhum jogo cadastrado.</p>';
     document.getElementById('relatorioApostas').innerHTML = jogos.map(tabelaApostasRelatorio).join('') || '<p class="text-muted">Nenhum jogo cadastrado.</p>';
@@ -780,6 +882,7 @@ window.addEventListener('hashchange', () => mostrarTelaAdmin());
 
 window.seedConquistasAdmin = seedConquistasAdmin;
 window.carregarRelatoriosAdmin = carregarRelatoriosAdmin;
+window.gerarPdfRelatorio = gerarPdfRelatorio;
 window.copiarPix = copiarPix;
 window.atualizarAposta = atualizarAposta;
 window.abrirModalApostasJogo = abrirModalApostasJogo;
