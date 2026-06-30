@@ -123,13 +123,14 @@ function prepararInterfaceApp() {
     { href: '/chaveamento.html', icon: '⌘', label: 'Chaveamento', active: ['/chaveamento.html'] },
     { href: '/perfil.html', icon: '◔', label: 'Perfil', active: ['/perfil.html'] },
     { href: '/regras.html', icon: '§', label: 'Regras', active: ['/regras.html'] },
+    { href: '#', icon: '&times;', label: 'Sair', active: [], logout: true },
   ];
 
   const nav = document.createElement('nav');
   nav.className = 'bottom-nav';
   nav.setAttribute('aria-label', 'Navegação principal');
   nav.innerHTML = items.map((item) => `
-    <a href="${item.href}" class="${item.active.includes(path) ? 'active' : ''}">
+    <a href="${item.href}" class="${item.active.includes(path) ? 'active' : ''}" ${item.logout ? 'onclick="event.preventDefault(); logout();"' : ''}>
       <span>${item.icon}</span>
       <small>${item.label}</small>
     </a>
