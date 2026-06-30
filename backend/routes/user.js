@@ -8,7 +8,7 @@ const { sincronizarPlacarFifa } = require('../services/fifa');
 
 const router = express.Router();
 const VALOR_PALPITE = 5;
-const TAXA_PALPITE = 0.05;
+const TAXA_PALPITE = 0.10;
 
 const AVATAR_FIELDS = ['avatar_face'];
 
@@ -456,16 +456,12 @@ router.post('/palpites', auth, async (req, res) => {
 
     const quantidade = codigos.length;
     const valorApostado = quantidade * VALOR_PALPITE;
-    const taxa = valorApostado * TAXA_PALPITE;
-    const premio = valorApostado - taxa;
     res.json({
       message: `${quantidade} palpite(s) salvo(s) com status pendente. Aguarde a aprovação do administrador.`,
       codigo_aposta: codigos[0],
       codigos_aposta: codigos,
       quantidade,
       valor_apostado: valorApostado,
-      taxa,
-      premio_previsto: premio,
       valor_total: valorApostado,
     });
   } catch {

@@ -256,7 +256,7 @@ function calcularResumoFinanceiroJogo(jogo, palpites) {
     ? aprovadas.filter((palpite) => palpitePlacarExato(jogo, palpite))
     : [];
   const valorApostado = aprovadas.length * 5;
-  const taxaPlataforma = valorApostado * 0.05;
+  const taxaPlataforma = valorApostado * 0.10;
   const arrecadado = valorApostado;
   const premioBase = valorApostado - taxaPlataforma;
   const premioTotal = vencedores.length
@@ -748,7 +748,7 @@ router.post('/jogos/:id/calcular', async (req, res) => {
     const isFinal = jogo.fase === 'final';
     const totalApostas = palpites.length;
     const valorApostado = totalApostas * 5;
-    const taxaPlataforma = valorApostado * 0.05;
+    const taxaPlataforma = valorApostado * 0.10;
     const arrecadado = valorApostado;
     const premioBase = valorApostado - taxaPlataforma;
     const premioAcumuladoFinal = Number(jogo.premio_acumulado || 0);

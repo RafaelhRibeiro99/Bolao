@@ -1,7 +1,6 @@
 protegerPagina(false);
 
 const VALOR_PALPITE = 5;
-const TAXA_PALPITE = 0.05;
 
 function dinheiro(valor) {
   return `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`;
@@ -85,7 +84,6 @@ function abrirPixModal(data) {
   const codigos = data.codigos_aposta || (data.codigo_aposta ? [data.codigo_aposta] : []);
   const quantidade = data.quantidade || codigos.length || 1;
   const valorApostado = data.valor_apostado ?? quantidade * VALOR_PALPITE;
-  const taxa = data.taxa ?? valorApostado * TAXA_PALPITE;
   const total = data.valor_total ?? valorApostado;
 
   document.getElementById('pixApostaCodigo').textContent = codigos.length
@@ -93,7 +91,6 @@ function abrirPixModal(data) {
     : 'Palpite salvo com status pendente.';
   document.getElementById('pixChavePagamento').textContent = pixPagamento;
   document.getElementById('pixValorBase').textContent = `${quantidade} x ${dinheiro(VALOR_PALPITE)} = ${dinheiro(valorApostado)}`;
-  document.getElementById('pixTaxaPagamento').textContent = `5% retidos internamente = ${dinheiro(taxa)}`;
   document.getElementById('pixValorTotal').textContent = dinheiro(total);
   modal.classList.remove('hidden');
 }
