@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('../config/db');
 const { auth } = require('../middleware/auth');
-const { CONQUISTAS, avaliarConquistas, metricasConquistas } = require('../services/conquistas');
 const { codigoApostaPorSequencia } = require('../services/codigosAposta');
 
 const router = express.Router();
@@ -99,7 +98,7 @@ function organizarRodadaPorOrigem(origem, jogos, slots) {
     resultado[slot] = {
       ...fallback,
       chaveamento_valido: false,
-      chaveamento_erro: 'Este jogo não corresponde aos times que alimentam este slot.',
+      chaveamento_erro: 'Este jogo nÃ£o corresponde aos times que alimentam este slot.',
     };
   }
 
@@ -139,30 +138,8 @@ async function premiosAcumulados(conn, jogosCache = null) {
   const final = jogos.find((jogo) => jogo.fase === 'final');
   return {
     final: Number(final?.premio_acumulado || 0),
-    ranking: Number(final?.taxa_admin || 0),
+    ranking: 0,
   };
-}
-
-function normalizarConquista(conquista, metricas) {
-  return {
-    ...conquista,
-    conquista_id: conquista.id,
-    grau: String(conquista.grau || conquista.raridade || 'comum').toLowerCase(),
-    raridade: String(conquista.grau || conquista.raridade || 'comum').toLowerCase(),
-    meta: conquista.meta || conquista.valor || 1,
-    progresso: conquista.progresso || 0,
-    equipada: false,
-    exibida: true,
-  };
-}
-
-function conquistasAdmin() {
-  return CONQUISTAS.map((conquista) => normalizarConquista({
-    ...conquista,
-    meta: conquista.valor,
-    progresso: conquista.valor,
-    desbloqueada: true,
-  }));
 }
 
 function dataJogoMs(dataJogo) {
@@ -194,6 +171,11 @@ function formatarDataHoraLocal(valor) {
 
 function serializarJogoData(row) {
   return row?.data_jogo ? { ...row, data_jogo: formatarDataHoraLocal(row.data_jogo) } : row;
+}
+
+function removerEspacos(valor) {
+  const texto = String(valor || '').replace(/\s+/g, '');
+  return texto || null;
 }
 
 function jogoComStatusApostas(jogo) {
@@ -233,8 +215,8 @@ function estatisticasPalpitesJogo(palpites) {
   return {
     total_palpites: total,
     valor_total_palpites: total * 5,
-    premio_previsto: total * 5 * 0.8,
-    taxa_plataforma: total * 5 * 0.2,
+    premio_previsto: total * 5,
+    taxa_plataforma: 0,
     termometro: {
       casa: percentual(casa),
       empate: percentual(empate),
@@ -270,48 +252,13 @@ router.get('/me', auth, async (req, res) => {
     conn = await pool.getConnection();
     const rows = await conn.query(
       `SELECT id, nome, nome_exibicao, email, tipo, status_pagamento, whatsapp, pix_chave, avatar,
-        avatar_face,
-        titulo_ativo, emoji_ativo, moldura, aura, efeito_nome
+        avatar_face
        FROM usuarios WHERE id = ?`,
       [req.user.id]
     );
-    if (!rows.length) return res.status(404).json({ message: 'Usuário não encontrado.' });
+    if (!rows.length) return res.status(404).json({ message: 'UsuÃ¡rio nÃ£o encontrado.' });
 
     const usuario = rows[0];
-    let conquistasRecentes = [];
-    let raridadeMaxima = null;
-    if (req.user.tipo === 'admin') {
-      const desbloqueadasAdmin = conquistasAdmin();
-      conquistasRecentes = desbloqueadasAdmin.slice(-3).reverse().map((conquista) => ({
-        nome: conquista.nome,
-        grau: conquista.grau,
-        emoji: conquista.emoji,
-      }));
-      raridadeMaxima = 'mitico';
-    } else {
-    try {
-      const conquistasRows = await conn.query(
-        `SELECT c.nome, c.grau
-         FROM usuario_conquistas uc
-         INNER JOIN conquistas c ON c.id = uc.conquista_id
-         WHERE uc.usuario_id = ? AND uc.desbloqueada_em IS NOT NULL
-         ORDER BY uc.desbloqueada_em DESC
-         LIMIT 3`,
-        [usuario.id]
-      );
-      conquistasRecentes = conquistasRows;
-      const graus = ['comum', 'raro', 'epico', 'lendario', 'mitico'];
-      for (let i = graus.length - 1; i >= 0; i -= 1) {
-        if (conquistasRows.some((row) => String(row.grau || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === graus[i])) {
-          raridadeMaxima = String(graus[i]).toLowerCase();
-          break;
-        }
-      }
-    } catch (e) {
-      raridadeMaxima = null;
-      conquistasRecentes = [];
-    }
-    }
 
     res.json({
       id: Number(usuario.id),
@@ -324,16 +271,9 @@ router.get('/me', auth, async (req, res) => {
       pix_chave: usuario.pix_chave || null,
       avatar: usuario.avatar || null,
       ...avatarPayload(usuario),
-      titulo_ativo: usuario.titulo_ativo || null,
-      emoji_ativo: usuario.emoji_ativo || null,
-      moldura: usuario.moldura || null,
-      aura: usuario.aura || null,
-      efeito_nome: usuario.efeito_nome || null,
-      conquistas_recentes: conquistasRecentes,
-      raridade_maxima: raridadeMaxima,
     });
   } catch {
-    res.status(500).json({ message: 'Erro ao buscar usuário.' });
+    res.status(500).json({ message: 'Erro ao buscar usuÃ¡rio.' });
   } finally { if (conn) conn.release(); }
 });
 
@@ -345,7 +285,7 @@ router.put('/perfil', auth, async (req, res) => {
     avatar = null,
     avatar_face = AVATAR_DEFAULTS.avatar_face,
   } = req.body;
-  if (!nome_exibicao) return res.status(400).json({ message: 'Informe o nome de exibição.' });
+  if (!nome_exibicao) return res.status(400).json({ message: 'Informe o nome de exibiÃ§Ã£o.' });
 
   let conn;
   try {
@@ -361,7 +301,7 @@ router.put('/perfil', auth, async (req, res) => {
         avatar_face = ?
        WHERE id = ?`,
       [
-        nome_exibicao, whatsapp, pix_chave, avatar,
+        nome_exibicao, removerEspacos(whatsapp), pix_chave, avatar,
         avatarFaceSeguro,
         req.user.id,
       ]
@@ -369,71 +309,6 @@ router.put('/perfil', auth, async (req, res) => {
     res.json({ message: 'Perfil atualizado.' });
   } catch {
     res.status(500).json({ message: 'Erro ao atualizar perfil.' });
-  } finally { if (conn) conn.release(); }
-});
-
-router.get('/conquistas', auth, async (req, res) => {
-  let conn;
-  try {
-    conn = await pool.getConnection();
-    const palpites = await conn.query(`
-      SELECT p.*, j.time_casa, j.time_fora, j.placar_casa, j.placar_fora, j.fase, j.status, j.data_jogo
-      FROM palpites p
-      INNER JOIN jogos j ON j.id = p.jogo_id
-      WHERE p.usuario_id = ?
-      ORDER BY p.data_palpite ASC
-    `, [req.user.id]);
-    const jogos = await conn.query('SELECT * FROM jogos ORDER BY data_jogo ASC');
-    const metricas = metricasConquistas(palpites, jogos);
-    const conquistas = req.user.tipo === 'admin'
-      ? conquistasAdmin()
-      : avaliarConquistas(palpites, jogos).map((conquista) => normalizarConquista(conquista, metricas));
-    const perfilRows = await conn.query(
-      `SELECT id, nome, nome_exibicao, avatar,
-        avatar_face,
-        titulo_ativo, emoji_ativo, moldura, aura, efeito_nome
-       FROM usuarios WHERE id = ?`,
-      [req.user.id]
-    );
-    const desbloqueadas = conquistas.filter(c => c.desbloqueada);
-    res.json({
-      perfil: perfilRows[0] ? { ...perfilRows[0], ...avatarPayload(perfilRows[0]) } : {},
-      metricas,
-      total_conquistas: CONQUISTAS.length,
-      conquistas_desbloqueadas: desbloqueadas.length,
-      conquistas,
-    });
-  } catch {
-    res.status(500).json({ message: 'Erro ao buscar conquistas.' });
-  } finally { if (conn) conn.release(); }
-});
-
-router.put('/perfil/titulo/:id', auth, async (req, res) => {
-  const conquistaId = Number(req.params.id);
-  let conn;
-  try {
-    conn = await pool.getConnection();
-    const palpites = await conn.query(`
-      SELECT p.*, j.time_casa, j.time_fora, j.placar_casa, j.placar_fora, j.fase, j.status, j.data_jogo
-      FROM palpites p
-      INNER JOIN jogos j ON j.id = p.jogo_id
-      WHERE p.usuario_id = ?
-      ORDER BY p.data_palpite ASC
-    `, [req.user.id]);
-    const jogos = await conn.query('SELECT * FROM jogos ORDER BY data_jogo ASC');
-    const def = req.user.tipo === 'admin'
-      ? CONQUISTAS.find((conquista) => conquista.id === conquistaId)
-      : avaliarConquistas(palpites, jogos).find((conquista) => conquista.id === conquistaId);
-    if (!def || (req.user.tipo !== 'admin' && !def.desbloqueada)) {
-      return res.status(400).json({ message: 'Conquista bloqueada ou inexistente.' });
-    }
-    await conn.query(
-      'UPDATE usuarios SET titulo_ativo = ?, emoji_ativo = ?, moldura = ?, aura = ?, efeito_nome = ? WHERE id = ?',
-      [def.titulo, def.emoji || null, def.moldura || null, def.aura || null, def.efeito_nome || null, req.user.id]
-    );
-    res.json({ message: 'Titulo equipado.', conquista: def });
-  } catch {
-    res.status(500).json({ message: 'Erro ao equipar titulo.' });
   } finally { if (conn) conn.release(); }
 });
 
@@ -495,7 +370,7 @@ router.get('/premios', auth, async (_req, res) => {
     conn = await pool.getConnection();
     res.json(await premiosAcumulados(conn));
   } catch {
-    res.status(500).json({ message: 'Erro ao buscar prêmios acumulados.' });
+    res.status(500).json({ message: 'Erro ao buscar prÃªmios acumulados.' });
   } finally { if (conn) conn.release(); }
 });
 
@@ -504,7 +379,7 @@ router.get('/jogos/:id', auth, async (req, res) => {
   try {
     conn = await pool.getConnection();
     const jogos = await conn.query('SELECT * FROM jogos WHERE id = ?', [req.params.id]);
-    if (!jogos.length) return res.status(404).json({ message: 'Jogo não encontrado.' });
+    if (!jogos.length) return res.status(404).json({ message: 'Jogo nÃ£o encontrado.' });
     res.json(await enriquecerJogo(conn, jogos[0]));
   } catch {
     res.status(500).json({ message: 'Erro ao buscar jogo.' });
@@ -517,11 +392,11 @@ router.post('/palpites', auth, async (req, res) => {
   try {
     conn = await pool.getConnection();
     const jogos = await conn.query('SELECT * FROM jogos WHERE id = ? AND liberado_palpite = 1', [jogo_id]);
-    if (!jogos.length) return res.status(404).json({ message: 'Jogo não liberado.' });
+    if (!jogos.length) return res.status(404).json({ message: 'Jogo nÃ£o liberado.' });
 
     const jogo = jogos[0];
     if (apostasEncerradas(jogo)) {
-      return res.status(400).json({ message: 'Apostas encerradas. O limite é de 10 minutos antes do início do jogo.' });
+      return res.status(400).json({ message: 'Apostas encerradas. O limite Ã© de 10 minutos antes do inÃ­cio do jogo.' });
     }
 
     const result = await conn.query(`
@@ -532,7 +407,7 @@ router.post('/palpites', auth, async (req, res) => {
     const codigo = codigoApostaPorSequencia(palpiteId || Date.now());
     await conn.query('UPDATE palpites SET codigo_aposta = ? WHERE id = ?', [codigo, palpiteId]);
 
-    res.json({ message: `Aposta ${codigo} salva com status pendente. Aguarde a aprovação do administrador.`, codigo_aposta: codigo });
+    res.json({ message: `Aposta ${codigo} salva com status pendente. Aguarde a aprovaÃ§Ã£o do administrador.`, codigo_aposta: codigo });
   } catch {
     res.status(500).json({ message: 'Erro ao salvar palpite.' });
   } finally { if (conn) conn.release(); }
@@ -557,7 +432,7 @@ router.get('/transparencia', auth, async (req, res) => {
       `, [jogo.id]);
       const palpitesAprovados = palpites.filter((palpite) => palpite.status_aposta === 'aprovado');
       const vencedores = palpitesAprovados.filter((palpite) => palpiteVencedor(jogo, palpite));
-      const premioBase = palpitesAprovados.length * 5 * 0.8;
+      const premioBase = palpitesAprovados.length * 5;
       const premioTotal = Number(jogo.jogo_validado || 0) === 1 && vencedores.length
         ? premioBase + (jogo.fase === 'final' ? Number(jogo.premio_acumulado || 0) : 0)
         : 0;
@@ -595,7 +470,7 @@ router.get('/transparencia', auth, async (req, res) => {
 
     res.json({ jogos: resultado, admin: req.user.tipo === 'admin' });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar transparência.' });
+    res.status(500).json({ message: 'Erro ao buscar transparÃªncia.' });
   } finally { if (conn) conn.release(); }
 });
 
@@ -619,7 +494,7 @@ router.get('/meus-palpites', auth, async (req, res) => {
       const jogoRef = rows.find((palpite) => Number(palpite.jogo_id) === jogoId);
       const aprovados = await conn.query('SELECT * FROM palpites WHERE jogo_id = ? AND status_aposta = "aprovado"', [jogoId]);
       const vencedores = aprovados.filter((palpite) => palpiteVencedor(jogoRef, palpite));
-      const premioBase = aprovados.length * 5 * 0.8;
+      const premioBase = aprovados.length * 5;
       const premioTotal = Number(jogoRef?.jogo_validado || 0) === 1 && vencedores.length
         ? premioBase + (jogoRef?.fase === 'final' ? Number(jogoRef?.premio_acumulado || 0) : 0)
         : 0;
@@ -646,69 +521,7 @@ router.get('/meus-palpites', auth, async (req, res) => {
 });
 
 router.get('/ranking', auth, async (_req, res) => {
-  let conn;
-  try {
-    conn = await pool.getConnection();
-    const usuarios = await conn.query(`SELECT id, nome, nome_exibicao, email, tipo, status_pagamento, criado_em,
-      titulo_ativo, emoji_ativo, moldura, aura, efeito_nome, avatar,
-      avatar_face
-      FROM usuarios ORDER BY criado_em DESC`);
-    const jogos = await conn.query('SELECT * FROM jogos ORDER BY data_jogo ASC');
-    const ranking = [];
-    for (const usuario of usuarios.filter((u) => u.tipo === 'user')) {
-      const palpites = await conn.query(`
-        SELECT p.*, j.time_casa, j.time_fora, j.placar_casa, j.placar_fora, j.fase, j.status, j.data_jogo
-        FROM palpites p
-        INNER JOIN jogos j ON j.id = p.jogo_id
-        WHERE p.usuario_id = ?
-        ORDER BY p.data_palpite ASC
-      `, [usuario.id]);
-      const metricas = metricasConquistas(palpites, jogos);
-      const conquistasDesbloqueadas = avaliarConquistas(palpites, jogos)
-        .filter((conquista) => conquista.desbloqueada)
-        .map((conquista) => normalizarConquista(conquista, metricas));
-      const conquistas = conquistasDesbloqueadas.length;
-      const conquistas_recentes = conquistasDesbloqueadas.slice(0, 3).map((conquista) => ({
-        nome: conquista.nome,
-        grau: conquista.grau,
-        emoji: conquista.emoji,
-      }));
-      const raridades = ['comum', 'raro', 'epico', 'lendario', 'mitico'];
-      let raridade_maxima = 'comum';
-      for (const raridade of raridades.slice().reverse()) {
-        if (conquistasDesbloqueadas.some((conquista) => conquista.grau === raridade)) {
-          raridade_maxima = raridade;
-          break;
-        }
-      }
-      const palpitesAprovados = palpites.filter((p) => p.status_aposta === 'aprovado');
-      const apostas = palpitesAprovados.length;
-      const acertos = palpitesAprovados.filter(p => Number(p.pontos || 0) > 0).length;
-      const taxa_acerto = apostas ? Math.round((acertos / apostas) * 1000) / 10 : 0;
-      const pontos = palpitesAprovados.reduce((sum, p) => sum + Number(p.pontos || 0), 0);
-      ranking.push({
-        nome: usuario.nome_exibicao || usuario.nome,
-        avatar: usuario.avatar,
-        pontos,
-        apostas,
-        acertos,
-        taxa_acerto,
-        conquistas,
-        conquistas_recentes,
-        raridade_maxima,
-        titulo_ativo: usuario.titulo_ativo,
-        emoji_ativo: usuario.emoji_ativo,
-        moldura: usuario.moldura,
-        aura: usuario.aura,
-        efeito_nome: usuario.efeito_nome,
-        ...avatarPayload(usuario)
-      });
-    }
-    ranking.sort((a, b) => b.conquistas - a.conquistas || b.taxa_acerto - a.taxa_acerto || b.apostas - a.apostas || a.nome.localeCompare(b.nome));
-    res.json(ranking);
-  } catch (e) {
-    res.status(500).json({ message: 'Erro ao buscar ranking.' });
-  } finally { if (conn) conn.release(); }
+  res.status(404).json({ message: 'Ranking removido.' });
 });
 
 router.get('/vencedores', auth, async (_req, res) => {
@@ -716,7 +529,7 @@ router.get('/vencedores', auth, async (_req, res) => {
   try {
     conn = await pool.getConnection();
     const rows = await conn.query(`
-      SELECT p.*, u.nome, u.nome_exibicao, u.avatar, u.avatar_face, u.titulo_ativo, u.emoji_ativo, u.moldura, u.aura, u.efeito_nome,
+      SELECT p.*, u.nome, u.nome_exibicao, u.avatar, u.avatar_face,
         j.time_casa, j.time_fora, j.placar_casa, j.placar_fora, j.status
       FROM palpites p
       INNER JOIN usuarios u ON u.id = p.usuario_id
@@ -725,10 +538,10 @@ router.get('/vencedores', auth, async (_req, res) => {
         AND j.status = "finalizado"
         AND p.pontos = 10
         AND (
-          SELECT COUNT(DISTINCT p3.usuario_id)
+          SELECT COUNT(*)
           FROM palpites p3
           WHERE p3.jogo_id = p.jogo_id AND p3.status_aposta = "aprovado"
-        ) >= 5
+        ) >= 2
       ORDER BY p.pontos DESC, u.nome ASC
     `);
     res.json(rows);
@@ -738,3 +551,4 @@ router.get('/vencedores', auth, async (_req, res) => {
 });
 
 module.exports = router;
+

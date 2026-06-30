@@ -6,7 +6,7 @@
   <title>Entrar | Bolão Copa 2026</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body class="public-screen">
   <nav class="navbar">
     <div class="nav-inner">
       <a class="brand" href="./index.html"><span class="brand-mark"><img src="assets/trophy-login.png" alt="Taça Premium da Copa do Mundo"></span> Bolão Copa 2026</a>
@@ -20,20 +20,21 @@
   <main class="container auth-layout">
     <section class="auth-card">
       <h1><img src="assets/trionda.png" alt="Trionda" class="auth-title-icon"> Entrar no Bolão</h1>
-      <p class="text-muted">Entre para apostar, acompanhar status e ver o ranking.</p>
+      <p class="text-muted">Entre para apostar e acompanhar seus palpites.</p>
       <form id="formLogin">
         <label>E-mail<input id="email" type="email" placeholder="seu@email.com" required></label>
         <label>Senha<input id="senha" type="password" placeholder="Sua senha" required></label>
         <button class="primary">Entrar</button>
       </form>
       <div class="actions" style="margin-top:18px; justify-content:center;">
+        <a class="btn btn-secondary" href="/recuperar-senha.html">Esqueci senha</a>
         <a class="btn btn-success" href="/cadastro.html">Criar conta</a>
       </div>
       <div id="mensagem"></div>
     </section>
   </main>
 
-  <footer class="footer">⚽ Bolão Copa do Mundo 2026</footer>
+  <footer class="footer">Bolão Copa do Mundo 2026</footer>
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
 </body>

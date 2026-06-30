@@ -21,29 +21,6 @@ function dataJogoPtBr(valor) {
   return '';
 }
 
-function rewardClass(valor, prefixo) {
-  const classe = String(valor || '');
-  return classe.startsWith(prefixo) && /^[a-z0-9_]+$/.test(classe) ? classe : '';
-}
-
-function tituloClasses(usuario) {
-  return [
-    'badge',
-    'badge-premium',
-    'titulo-equipado',
-    rewardClass(usuario.moldura, 'moldura_') ? `titulo-${rewardClass(usuario.moldura, 'moldura_')}` : '',
-    rewardClass(usuario.aura, 'aura_') ? `titulo-${rewardClass(usuario.aura, 'aura_')}` : '',
-    rewardClass(usuario.efeito_nome, 'efeito_') ? `titulo-${rewardClass(usuario.efeito_nome, 'efeito_')}` : '',
-  ].filter(Boolean).join(' ');
-}
-
-function nomeClasses(usuario) {
-  return [
-    rewardClass(usuario.efeito_nome, 'efeito_'),
-    rewardClass(usuario.aura, 'aura_') ? `nome-${rewardClass(usuario.aura, 'aura_')}` : '',
-  ].filter(Boolean).join(' ');
-}
-
 let meusPalpitesCache = [];
 
 function statusApostaLabel(status) {
@@ -72,10 +49,10 @@ function classePalpite(palpite) {
 }
 
 function situacaoPalpite(palpite) {
-  if (palpite.vencedor) return '<span class="result-chip winner-chip">🏆 Ganhou</span>';
-  if (palpite.perdedor) return '<span class="result-chip loser-chip">✕ Perdeu</span>';
+  if (palpite.vencedor) return '<span class="result-chip winner-chip">Ganhou</span>';
+  if (palpite.perdedor) return '<span class="result-chip loser-chip">Perdeu</span>';
   if (palpite.status === 'finalizado' && Number(palpite.jogo_validado || 0) !== 1 && palpite.status_aposta === 'aprovado') {
-    return '<span class="result-chip pending-chip">⌛ Não validado</span>';
+    return '<span class="result-chip pending-chip">Não validado</span>';
   }
   return `<span class="status-badge ${palpite.status_aposta}">${statusApostaLabel(palpite.status_aposta)}</span>`;
 }
@@ -90,7 +67,7 @@ function motivoReprovacaoPalpite(palpite) {
   const motivo = corrigirTextoMojibake(palpite.motivo_reprovacao || 'Motivo não informado pelo administrador.');
   return `
     <div class="rejection-reason" role="alert">
-      <strong>⚠️ Aposta reprovada</strong>
+      <strong>Aposta reprovada</strong>
       <span>${escapeHtml(motivo)}</span>
     </div>
   `;
@@ -106,14 +83,14 @@ function renderizarMinhasApostas() {
         <strong>${palpite.time_casa} vs ${palpite.time_fora}</strong>
         <small>${formatarDataHoraJogo(palpite.data_jogo)}</small>
       </div>
-      <div><small>Codigo</small><strong class="bet-code">${palpite.codigo_aposta || '-'}</strong></div>
+      <div><small>Código</small><strong class="bet-code">${palpite.codigo_aposta || '-'}</strong></div>
       <div><small>Palpite</small><strong>${palpite.palpite_casa} x ${palpite.palpite_fora}</strong></div>
       <div><small>Resultado</small><strong>${resultadoPalpite(palpite)}</strong></div>
       ${ganhoPalpite(palpite)}
       ${situacaoPalpite(palpite)}
       ${motivoReprovacaoPalpite(palpite)}
     </div>
-  `).join('') || '<p class="text-muted">Voce ainda nao fez apostas.</p>';
+  `).join('') || '<p class="text-muted">Você ainda não fez apostas.</p>';
 }
 
 async function carregarPerfil() {
@@ -122,20 +99,11 @@ async function carregarPerfil() {
   const avatarEl = document.getElementById('avatarUsuario');
   avatarEl.innerHTML = renderAvatarUsuario(usuario, { size: 'md' });
   avatarEl.className = 'avatar';
-  const classeMoldura = rewardClass(usuario.moldura, 'moldura_');
-  const classeAura = rewardClass(usuario.aura, 'aura_');
-  const avatar2d = avatarEl.querySelector('.avatar2d');
-  if (classeMoldura) avatar2d?.classList.add(classeMoldura);
-  if (classeAura) avatar2d?.classList.add(classeAura);
-
-  document.getElementById('nomeUsuario').innerHTML = `
-    <span class="${nomeClasses(usuario)}">${usuario.nome_exibicao || usuario.nome}</span>
-    ${usuario.titulo_ativo ? `<span class="${tituloClasses(usuario)}">${usuario.emoji_ativo || ''} ${usuario.titulo_ativo}</span>` : ''}
-  `;
+  document.getElementById('nomeUsuario').textContent = usuario.nome_exibicao || usuario.nome || 'Participante';
 
   const aviso = document.getElementById('avisoPalpites');
   aviso.className = 'notice warning';
-  aviso.textContent = 'Seu acesso a plataforma e imediato. Cada palpite fica pendente e so entra no bolao apos aprovacao do administrador.';
+  aviso.textContent = 'Seu acesso à plataforma é imediato. Cada palpite fica pendente e só entra no Bolão após aprovação do administrador.';
 }
 
 async function carregarMetricas() {
@@ -176,22 +144,11 @@ async function carregarResumoJogos() {
   `).join('') || '<p class="text-muted">Nenhum jogo cadastrado.</p>';
 }
 
-async function carregarConquistasResumo() {
-  const data = await request('/conquistas');
-  const desbloqueadas = data.conquistas.filter(c => c.desbloqueada).slice(0, 3);
-  const proximas = data.conquistas.filter(c => !c.desbloqueada).slice(0, 3);
-  const itens = desbloqueadas.length ? desbloqueadas : proximas;
-  document.getElementById('conquistasResumo').innerHTML = itens.map(c => `
-    <div class="mini-row"><strong>${c.emoji || c.icone || '🏆'} ${c.nome}</strong><small>${c.descricao}</small></div>
-  `).join('') || '<p class="text-muted">Nenhuma conquista cadastrada.</p>';
-}
-
 async function init() {
   try {
     await carregarPerfil();
     await carregarMetricas();
     await carregarResumoJogos();
-    await carregarConquistasResumo();
   } catch (err) {
     const el = document.getElementById('avisoPalpites');
     if (el) {

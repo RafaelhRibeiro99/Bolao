@@ -11,11 +11,6 @@ CREATE TABLE IF NOT EXISTS usuarios (
   pix_chave VARCHAR(120) NULL,
   avatar VARCHAR(20) NULL,
   avatar_face VARCHAR(80) NULL DEFAULT 'messi.png',
-  titulo_ativo VARCHAR(100) NULL,
-  emoji_ativo VARCHAR(20) NULL,
-  moldura VARCHAR(100) NULL,
-  aura VARCHAR(100) NULL,
-  efeito_nome VARCHAR(100) NULL,
   termos_aceitos SMALLINT NOT NULL DEFAULT 0,
   criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

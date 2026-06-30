@@ -6,7 +6,7 @@
   <title>Recuperar senha | Bolão Copa 2026</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body class="public-screen">
   <nav class="navbar">
     <div class="nav-inner">
       <a class="brand" href="/index.html"><span class="brand-mark"><img src="assets/trophy-login.png" alt="Taça Premium da Copa do Mundo"></span> Bolão Copa 2026</a>
@@ -19,11 +19,20 @@
 
   <main class="container auth-layout">
     <section class="auth-card">
-      <h1>🔐 Recuperar senha</h1>
-      <p class="text-muted">Informe o e-mail que você usou no cadastro para receber instruções de recuperação.</p>
+      <h1>Recuperar senha</h1>
+      <p class="text-muted">Confirme o e-mail cadastrado e o telefone para trocar sua senha.</p>
       <form id="formRecuperar">
         <label>E-mail<input id="email" type="email" placeholder="seu@email.com" required></label>
-        <button class="primary">Enviar instruções</button>
+        <label>Telefone<input id="telefone" inputmode="tel" placeholder="(00) 00000-0000" required></label>
+        <label>Nova senha<input id="senha" type="password" placeholder="Mínimo 4 dígitos" required></label>
+        <div class="password-strength" id="passwordStrength">
+          <div class="strength-bar">
+            <div class="strength-indicator" id="strengthIndicator"></div>
+          </div>
+          <div class="strength-text" id="strengthText">Mínimo 4 dígitos</div>
+        </div>
+        <label>Confirmar nova senha<input id="senhaConfirm" type="password" placeholder="Repita a nova senha" required></label>
+        <button class="primary">Alterar senha</button>
       </form>
       <div id="mensagem"></div>
       <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
@@ -33,18 +42,8 @@
     </section>
   </main>
 
-  <footer class="footer">⚽ Bolão Copa do Mundo 2026</footer>
+  <footer class="footer">Bolão Copa do Mundo 2026</footer>
   <script src="/js/api.js"></script>
-  <script>
-    document.getElementById('formRecuperar')?.addEventListener('submit', function (e) {
-      e.preventDefault();
-      const email = document.getElementById('email').value;
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        msg('mensagem', 'Informe um email válido.', 'error');
-        return;
-      }
-      msg('mensagem', 'Se o email existir, você receberá instruções em breve.', 'success');
-    });
-  </script>
+  <script src="/js/auth.js"></script>
 </body>
 </html>

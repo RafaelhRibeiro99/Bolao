@@ -19,7 +19,7 @@ function abrirPixModal(data) {
   const modal = document.getElementById('pixModal');
   if (!modal) return;
   document.getElementById('pixApostaCodigo').textContent = data.codigo_aposta
-    ? `Codigo da aposta: ${data.codigo_aposta}`
+    ? `Código da aposta: ${data.codigo_aposta}`
     : 'Aposta salva com status pendente.';
   document.getElementById('pixChavePagamento').textContent = pixPagamento;
   modal.classList.remove('hidden');
@@ -34,7 +34,7 @@ async function copiarPixPagamento() {
     await navigator.clipboard.writeText(pixPagamento);
     msg('mensagem', 'Chave Pix copiada.');
   } catch {
-    msg('mensagem', 'Nao foi possivel copiar a chave Pix.', 'error');
+    msg('mensagem', 'Não foi possível copiar a chave Pix.', 'error');
   }
 }
 

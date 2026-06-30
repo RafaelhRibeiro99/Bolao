@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -16,7 +16,6 @@
         <a href="#times" data-admin-nav="times">Times</a>
         <a href="#jogos" data-admin-nav="jogos">Jogos</a>
         <a href="#relatorios" data-admin-nav="relatorios">Relat&oacute;rios</a>
-        <a href="#conquistas" data-admin-nav="conquistas">Conquistas</a>
         <a href="#transparencia" data-admin-nav="transparencia">Transpar&ecirc;ncia</a>
         <a href="#area-usuario" data-admin-nav="area-usuario">&Aacute;rea usu&aacute;rio</a>
         <a href="#" onclick="logout()">Sair</a>
@@ -36,7 +35,6 @@
       <div class="card stat-card"><small>Apostas aprovadas</small><strong id="statAprovadas">&#9989; 0</strong></div>
       <div class="card stat-card"><small>Times</small><strong id="statTimes">&#9917; 0</strong></div>
       <div class="card stat-card"><small>Jogos</small><strong id="statJogos">&#9917; 0</strong></div>
-      <div class="card stat-card"><small>Conquistas</small><strong id="statConquistas">&#127942; 0</strong></div>
     </section>
 
     <div id="msgAdmin"></div>
@@ -63,7 +61,7 @@
 
     <div id="apostasJogoModal" class="payment-modal hidden" role="dialog" aria-modal="true" aria-labelledby="apostasJogoTitulo">
       <div class="payment-modal-panel admin-bets-modal">
-        <button class="modal-close" type="button" onclick="fecharModalApostasJogo()">×</button>
+        <button class="modal-close" type="button" onclick="fecharModalApostasJogo()">&times;</button>
         <h2 id="apostasJogoTitulo">Apostas do jogo</h2>
         <label>Pesquisar por nome<input id="buscaApostasJogo" type="search" placeholder="Digite o nome do participante"></label>
         <div id="apostasJogoResumo" class="transparency-summary"></div>
@@ -123,6 +121,20 @@
       </div>
     </section>
 
+    <section id="apiCopaBox" class="data-section admin-screen" data-admin-screen="jogos">
+      <div class="section-title">
+        <h2>Jogos da Copa pela API</h2>
+        <div class="actions">
+          <input id="buscaJogosApi" type="search" placeholder="Filtrar por time, fase ou data">
+          <button class="primary" type="button" onclick="carregarJogosApiCopa()">Buscar API-Football</button>
+          <button class="secondary" type="button" onclick="carregarJogosWikipedia2026()">Buscar Wikipedia 2026</button>
+          <button class="secondary" type="button" onclick="carregarJogosOpenLigaDB()">Buscar OpenLigaDB</button>
+        </div>
+      </div>
+      <div id="apiCopaMsg"></div>
+      <div id="jogosApiCopa" class="api-fixture-grid"></div>
+    </section>
+
     <section id="relatoriosBox" class="admin-screen" data-admin-screen="relatorios">
       <div class="section-title">
         <h2>&#128202; Relat&oacute;rios</h2>
@@ -152,19 +164,6 @@
       </section>
     </section>
 
-    <section id="conquistasBox" class="data-section admin-screen" data-admin-screen="conquistas">
-      <div class="section-title">
-        <h2>&#127942; Conquistas</h2>
-        <button class="primary" type="button" onclick="seedConquistasAdmin()">Atualizar conquistas</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Nome</th><th>Grau</th><th>Recompensas</th><th>Meta</th></tr></thead>
-          <tbody id="conquistasAdmin"></tbody>
-        </table>
-      </div>
-    </section>
-
     <section id="transparenciaAdminBox" class="admin-screen" data-admin-screen="transparencia">
       <div class="section-title"><h2>&#128065; Transpar&ecirc;ncia</h2></div>
       <div id="transparenciaAdminMsg"></div>
@@ -176,7 +175,6 @@
       <div class="admin-shortcuts">
         <a class="btn btn-primary" href="/dashboard.html">Abrir painel do usu&aacute;rio</a>
         <a class="btn btn-primary" href="/jogos.html">Abrir jogos</a>
-        <a class="btn btn-primary" href="/ranking.html">Abrir ranking</a>
         <a class="btn btn-primary" href="/perfil.html">Abrir perfil</a>
       </div>
     </section>
@@ -187,3 +185,5 @@
   <script src="/js/admin.js"></script>
 </body>
 </html>
+
+

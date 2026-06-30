@@ -13,32 +13,17 @@ function logout() {
 
 function corrigirTextoMojibake(texto) {
   if (typeof texto !== 'string') return texto;
-  return texto
-    .replace(/Ã¡/g, 'á')
-    .replace(/Ã /g, 'à')
-    .replace(/Ã¢/g, 'â')
-    .replace(/Ã£/g, 'ã')
-    .replace(/Ã©/g, 'é')
-    .replace(/Ãª/g, 'ê')
-    .replace(/Ã­/g, 'í')
-    .replace(/Ã³/g, 'ó')
-    .replace(/Ã´/g, 'ô')
-    .replace(/Ãµ/g, 'õ')
-    .replace(/Ãº/g, 'ú')
-    .replace(/Ã§/g, 'ç')
-    .replace(/nÆo/g, 'não')
-    .replace(/NÆo/g, 'Não')
-    .replace(/Ã/g, 'Á')
-    .replace(/Ã‰/g, 'É')
-    .replace(/Ã“/g, 'Ó')
-    .replace(/Ãš/g, 'Ú')
-    .replace(/Ã‡/g, 'Ç')
-    .replace(/Âº/g, 'º')
-    .replace(/Âª/g, 'ª');
+  const temMojibake = [...texto].some((char) => [194, 195, 226, 240].includes(char.charCodeAt(0)) || char === '\uFFFD');
+  if (!temMojibake) return texto;
+  try {
+    return decodeURIComponent(escape(texto));
+  } catch (_err) {
+    return texto;
+  }
 }
 
 async function request(url, options = {}) {
-  const { skipAchievementCheck = false, ...fetchOptions } = options;
+  const fetchOptions = options;
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -55,10 +40,6 @@ async function request(url, options = {}) {
   }
 
   if (!res.ok) throw new Error(corrigirTextoMojibake(data.message || 'Erro na requisição.'));
-  const method = String(fetchOptions.method || 'GET').toUpperCase();
-  if (!skipAchievementCheck && method !== 'GET' && url !== '/conquistas') {
-    setTimeout(() => verificarConquistasToast({ forcarNotificacao: url === '/palpites' }), 800);
-  }
   return data;
 }
 
@@ -78,7 +59,15 @@ function protegerPagina(admin = false) {
 function mostrarAtalhoAdmin() {
   const usuario = getUser();
   if (!usuario || usuario.tipo !== 'admin') return;
-  if (location.pathname === '/admin.html') return;
+  const paginasPublicas = new Set([
+    '/',
+    '/index.html',
+    '/login.html',
+    '/cadastro.html',
+    '/recuperar-senha.html',
+    '/verificacao.html',
+  ]);
+  if (location.pathname === '/admin.html' || paginasPublicas.has(location.pathname)) return;
 
   const menu = document.querySelector('.nav-menu');
   if (!menu || menu.querySelector('a[href="/admin.html"]')) return;
@@ -100,70 +89,56 @@ function mostrarAtalhoAdmin() {
   main.prepend(aviso);
 }
 
-function normalizarConquistaToast(conquista) {
-  return {
-    ...conquista,
-    conquista_id: conquista.conquista_id || conquista.id,
-    grau: conquista.grau || conquista.raridade || 'comum',
-  };
-}
-
-function mostrarToastConquistaGlobal(conquista) {
-  const c = normalizarConquistaToast(conquista);
-  const toast = document.createElement('div');
-  toast.className = `toast-conquista ${String(c.grau).toLowerCase()}`;
-  toast.innerHTML = `
-    <div class="toast-icon">🏆</div>
-    <div class="toast-content">
-      <div class="toast-title">NOVA CONQUISTA</div>
-      <div class="toast-nome">✨ ${c.nome}</div>
-      <div class="toast-desc">${c.descricao}</div>
-    </div>
-  `;
-  document.body.appendChild(toast);
-  setTimeout(() => { toast.classList.add('show'); }, 100);
-  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 800); }, 5000);
-}
-
-function conquistasToastKey() {
+function prepararInterfaceApp() {
   const usuario = getUser();
-  return `conquistas_vistas_${usuario?.id || usuario?.email || 'anon'}`;
-}
+  const path = location.pathname || '/';
+  const paginasPublicas = new Set([
+    '/',
+    '/index.html',
+    '/login.html',
+    '/cadastro.html',
+    '/recuperar-senha.html',
+    '/verificacao.html',
+  ]);
 
-async function verificarConquistasToast({ silencioso = false, forcarNotificacao = false } = {}) {
-  const usuario = getUser();
-  if (!usuario || !getToken() || usuario.tipo === 'admin') return;
+  document.body.classList.toggle('public-screen', paginasPublicas.has(path));
+  document.body.classList.toggle('app-screen', Boolean(usuario && getToken() && !paginasPublicas.has(path)));
+  document.body.classList.toggle('admin-screen-body', path === '/admin.html');
 
-  try {
-    const data = await request('/conquistas', { skipAchievementCheck: true });
-    const desbloqueadas = (data.conquistas || [])
-      .map(normalizarConquistaToast)
-      .filter((conquista) => conquista.desbloqueada);
-    const idsAtuais = desbloqueadas.map((conquista) => String(conquista.conquista_id));
-    const key = conquistasToastKey();
-    const idsVistos = JSON.parse(localStorage.getItem(key) || 'null');
-
-    if ((Array.isArray(idsVistos) || forcarNotificacao) && !silencioso) {
-      desbloqueadas
-        .filter((conquista) => !Array.isArray(idsVistos) || !idsVistos.includes(String(conquista.conquista_id)))
-        .forEach(mostrarToastConquistaGlobal);
-    }
-
-    localStorage.setItem(key, JSON.stringify(idsAtuais));
-  } catch {
-    // O monitor de conquistas não deve atrapalhar a tela atual.
+  const menu = document.querySelector('.nav-menu');
+  if (menu) {
+    menu.querySelectorAll('a').forEach((link) => {
+      const href = link.getAttribute('href') || '';
+      link.classList.toggle('active', href === path || (path === '/' && href.endsWith('/index.html')));
+    });
   }
+
+  if (!usuario || !getToken() || paginasPublicas.has(path) || path === '/admin.html' || document.querySelector('.bottom-nav')) {
+    return;
+  }
+
+  const items = [
+    { href: '/dashboard.html', icon: '⌂', label: 'Início', active: ['/dashboard.html'] },
+    { href: '/jogos.html', icon: '▦', label: 'Jogos', active: ['/jogos.html'] },
+    { href: '/jogos.html', icon: '◎', label: 'Apostar', active: ['/apostar.html'] },
+    { href: '/chaveamento.html', icon: '⌘', label: 'Chaveamento', active: ['/chaveamento.html'] },
+    { href: '/perfil.html', icon: '◔', label: 'Perfil', active: ['/perfil.html'] },
+    { href: '/regras.html', icon: '§', label: 'Regras', active: ['/regras.html'] },
+  ];
+
+  const nav = document.createElement('nav');
+  nav.className = 'bottom-nav';
+  nav.setAttribute('aria-label', 'Navegação principal');
+  nav.innerHTML = items.map((item) => `
+    <a href="${item.href}" class="${item.active.includes(path) ? 'active' : ''}">
+      <span>${item.icon}</span>
+      <small>${item.label}</small>
+    </a>
+  `).join('');
+  document.body.appendChild(nav);
 }
 
-function iniciarMonitorConquistas() {
-  const usuario = getUser();
-  if (!usuario || !getToken() || usuario.tipo === 'admin') return;
-  verificarConquistasToast({ silencioso: localStorage.getItem(conquistasToastKey()) === null });
-  setInterval(() => verificarConquistasToast(), 5000);
-}
-
-window.verificarConquistasToast = verificarConquistasToast;
 document.addEventListener('DOMContentLoaded', () => {
+  prepararInterfaceApp();
   mostrarAtalhoAdmin();
-  iniciarMonitorConquistas();
 });

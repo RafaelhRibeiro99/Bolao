@@ -1,19 +1,10 @@
 const passwordStrength = (senha) => {
-  let score = 0;
-  if (senha.length >= 8) score += 1;
-  if (/[A-Z]/.test(senha)) score += 1;
-  if (/[a-z]/.test(senha)) score += 1;
-  if (/[0-9]/.test(senha)) score += 1;
-  if (/[^A-Za-z0-9]/.test(senha)) score += 1;
-  return score;
+  return String(senha || '').replace(/\D/g, '').length >= 4 ? 3 : 0;
 };
 
 const strengthLabel = (score) => {
-  if (score <= 1) return { text: 'Muito fraca', colorClass: 'weak', width: '20%', color: '#dc2626' };
-  if (score === 2) return { text: 'Fraca', colorClass: 'fair', width: '40%', color: '#f59e0b' };
-  if (score === 3) return { text: 'Média', colorClass: 'good', width: '60%', color: '#3b82f6' };
-  if (score === 4) return { text: 'Boa', colorClass: 'good', width: '80%', color: '#3b82f6' };
-  return { text: 'Forte', colorClass: 'strong', width: '100%', color: '#16a34a' };
+  if (score < 3) return { text: 'Mínimo 4 dígitos', colorClass: 'weak', width: '35%', color: '#dc2626' };
+  return { text: 'Senha válida', colorClass: 'strong', width: '100%', color: '#16a34a' };
 };
 
 const updatePasswordStrength = () => {
@@ -35,13 +26,35 @@ const updatePasswordStrength = () => {
   strengthText.className = `strength-text ${colorClass}`;
 };
 
+const onlyDigits = (valor) => String(valor || '').replace(/\D/g, '');
+
+const formatPhone = (valor) => {
+  const digits = onlyDigits(valor).slice(0, 11);
+  if (digits.length <= 10) {
+    return digits
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  }
+  return digits
+    .replace(/(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{5})(\d)/, '$1-$2');
+};
+
+document.getElementById('telefone')?.addEventListener('input', (event) => {
+  event.target.value = formatPhone(event.target.value);
+});
+
+document.getElementById('whatsapp')?.addEventListener('input', (event) => {
+  event.target.value = formatPhone(event.target.value);
+});
+
 const checkEmailAvailability = async () => {
   const rawEmail = document.getElementById('email')?.value || '';
   const email = rawEmail.trim().toLowerCase();
   const emailFeedback = document.getElementById('emailFeedback');
   if (!emailFeedback) return { available: true, error: true };
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    emailFeedback.textContent = 'Informe um email válido.';
+    emailFeedback.textContent = 'Informe um e-mail válido.';
     emailFeedback.className = 'email-feedback taken';
     emailFeedback.style.display = 'block';
     return { available: false, error: false };
@@ -61,11 +74,11 @@ const checkEmailAvailability = async () => {
       emailFeedback.className = 'email-feedback taken';
       return { available: false, error: false };
     }
-    emailFeedback.textContent = 'Não foi possível verificar o email. Tentando cadastrar mesmo assim...';
+    emailFeedback.textContent = 'Não foi possível verificar o e-mail. Tentando cadastrar mesmo assim...';
     emailFeedback.className = 'email-feedback checking';
     return { available: true, error: true };
   } catch (err) {
-    emailFeedback.textContent = 'Não foi possível verificar o email. Tentando cadastrar mesmo assim...';
+    emailFeedback.textContent = 'Não foi possível verificar o e-mail. Tentando cadastrar mesmo assim...';
     emailFeedback.className = 'email-feedback checking';
     return { available: true, error: true };
   }
@@ -90,7 +103,7 @@ document.getElementById('formCadastro')?.addEventListener('submit', async (e) =>
   if (!emailCheck.available && !emailCheck.error) return msg('mensagem', 'E-mail já cadastrado.', 'error');
 
   const score = passwordStrength(senha);
-  if (score < 3) return msg('mensagem', 'Senha muito fraca. Use pelo menos 8 caracteres, letras e números.', 'error');
+  if (score < 3) return msg('mensagem', 'A senha deve conter no mínimo 4 dígitos.', 'error');
 
   try {
     await request('/auth/cadastro', { method: 'POST', body: JSON.stringify({ nome, email, senha, whatsapp, termos_aceitos }) });
@@ -100,11 +113,32 @@ document.getElementById('formCadastro')?.addEventListener('submit', async (e) =>
   } catch (err) { msg('mensagem', err.message, 'error'); }
 });
 
+document.getElementById('formRecuperar')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim().toLowerCase();
+  const telefone = onlyDigits(document.getElementById('telefone')?.value || '');
+  const nova_senha = document.getElementById('senha').value;
+  const senhaConfirm = document.getElementById('senhaConfirm')?.value || '';
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msg('mensagem', 'E-mail em formato inválido.', 'error');
+  if (telefone.length < 10) return msg('mensagem', 'Informe o telefone cadastrado.', 'error');
+  if (nova_senha !== senhaConfirm) return msg('mensagem', 'As senhas não coincidem.', 'error');
+  if (passwordStrength(nova_senha) < 3) return msg('mensagem', 'A senha deve conter no mínimo 4 dígitos.', 'error');
+
+  try {
+    await request('/auth/recuperar-senha', { method: 'POST', body: JSON.stringify({ email, telefone, nova_senha }) });
+    msg('mensagem', 'Senha alterada com sucesso. Você já pode entrar.');
+    e.target.reset();
+    updatePasswordStrength();
+  } catch (err) {
+    msg('mensagem', err.message, 'error');
+  }
+});
+
 document.getElementById('formLogin')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('email').value;
   const senha = document.getElementById('senha').value;
-  // validações client-side
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msg('mensagem', 'E-mail em formato inválido.', 'error');
 
@@ -114,6 +148,5 @@ document.getElementById('formLogin')?.addEventListener('submit', async (e) => {
     location.href = data.usuario.tipo === 'admin' ? '/admin.html' : '/dashboard.html';
   } catch (err) {
     msg('mensagem', err.message, 'error');
-    // Verificação de email é opcional em ambiente de teste
   }
 });

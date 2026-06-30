@@ -44,6 +44,7 @@ if (process.env.USE_MEMORY_DB === 'true') {
     nome: 'Administrador',
     nome_exibicao: 'Administrador',
     email: 'admin@bolao.com',
+    cpf: null,
     senha_hash: '$2a$10$L5dm8xwsR2dFaEKZ6ISQeuZkpdolNYEeVSHEAACv4AOleLyBIf7O.',
     tipo: 'admin',
     status_pagamento: 'pago',
@@ -51,11 +52,6 @@ if (process.env.USE_MEMORY_DB === 'true') {
     pix_chave: null,
     avatar: null,
     avatar_face: 'messi.png',
-    titulo_ativo: null,
-    emoji_ativo: null,
-    moldura: null,
-    aura: null,
-    efeito_nome: null,
     termos_aceitos: 1,
     email_verified: 1,
     criado_em: new Date(),
@@ -141,7 +137,6 @@ if (process.env.USE_MEMORY_DB === 'true') {
   }));
 
   const palpites = [];
-  const usuarioConquistas = [];
 
   function byDate(a, b) {
     return new Date(a.data_jogo) - new Date(b.data_jogo);
@@ -157,7 +152,7 @@ if (process.env.USE_MEMORY_DB === 'true') {
   }
 
   function isValidatedGame(jogoId) {
-    return new Set(approvedBetsForGame(jogoId).map((p) => p.usuario_id)).size >= 5;
+    return approvedBetsForGame(jogoId).length >= 2;
   }
 
   function maxPointsForGame(jogoId) {
@@ -171,6 +166,10 @@ if (process.env.USE_MEMORY_DB === 'true') {
           const normalized = sql.replace(/\s+/g, ' ').trim();
 
           if (normalized.startsWith('ALTER TABLE palpites ADD COLUMN IF NOT EXISTS motivo_reprovacao')) {
+            return { affectedRows: 0 };
+          }
+
+          if (normalized.startsWith('ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS cpf')) {
             return { affectedRows: 0 };
           }
 
@@ -239,26 +238,41 @@ if (process.env.USE_MEMORY_DB === 'true') {
             return usuarios.filter((u) => u.email === params[0]);
           }
 
+          if (normalized.startsWith('SELECT id FROM usuarios WHERE email = ? AND cpf = ?')) {
+            return usuarios
+              .filter((u) => u.email === params[0] && String(u.cpf || '') === String(params[1] || ''))
+              .map((u) => ({ id: u.id }));
+          }
+
+          if (normalized.startsWith('SELECT id, whatsapp FROM usuarios WHERE email = ?')) {
+            return usuarios
+              .filter((u) => u.email === params[0])
+              .map((u) => ({ id: u.id, whatsapp: u.whatsapp }));
+          }
+
+          if (normalized.startsWith('UPDATE usuarios SET senha_hash = ? WHERE id = ?')) {
+            const usuario = usuarios.find((u) => u.id === Number(params[1]));
+            if (usuario) usuario.senha_hash = params[0];
+            return { affectedRows: usuario ? 1 : 0 };
+          }
+
           if (normalized.startsWith('INSERT INTO usuarios')) {
+            const cadastroComCpf = params.length >= 10;
             const cadastroCompleto = params.length >= 9;
             usuarios.push({
               id: nextUserId++,
               nome: params[0],
               nome_exibicao: cadastroCompleto ? params[1] : params[0],
               email: cadastroCompleto ? params[2] : params[1],
-              senha_hash: cadastroCompleto ? params[3] : params[2],
-              tipo: cadastroCompleto ? params[4] : params[3],
-              status_pagamento: cadastroCompleto ? params[5] : params[4],
-              whatsapp: cadastroCompleto ? params[6] : null,
+              cpf: cadastroComCpf ? params[3] : null,
+              senha_hash: cadastroComCpf ? params[4] : (cadastroCompleto ? params[3] : params[2]),
+              tipo: cadastroComCpf ? params[5] : (cadastroCompleto ? params[4] : params[3]),
+              status_pagamento: cadastroComCpf ? params[6] : (cadastroCompleto ? params[5] : params[4]),
+              whatsapp: cadastroComCpf ? params[7] : (cadastroCompleto ? params[6] : null),
               pix_chave: null,
-              avatar: cadastroCompleto ? params[7] : null,
+              avatar: cadastroComCpf ? params[8] : (cadastroCompleto ? params[7] : null),
               avatar_face: 'messi.png',
-              titulo_ativo: null,
-              emoji_ativo: null,
-              moldura: null,
-              aura: null,
-              efeito_nome: null,
-              termos_aceitos: cadastroCompleto ? Number(params[8]) : 0,
+              termos_aceitos: cadastroComCpf ? Number(params[9]) : (cadastroCompleto ? Number(params[8]) : 0),
               email_verified: 0,
               criado_em: new Date(),
             });
@@ -269,10 +283,6 @@ if (process.env.USE_MEMORY_DB === 'true') {
             return usuarios
               .filter((u) => u.id === Number(params[0]))
               .map((u) => ({ status_pagamento: u.status_pagamento }));
-          }
-
-          if (normalized.startsWith('SELECT * FROM usuario_conquistas WHERE usuario_id = ?')) {
-            return usuarioConquistas.filter((c) => c.usuario_id === Number(params[0]));
           }
 
           if (normalized.startsWith('SELECT id, nome, nome_exibicao, email, tipo, status_pagamento, whatsapp, pix_chave, avatar,')) {
@@ -291,40 +301,9 @@ if (process.env.USE_MEMORY_DB === 'true') {
             return [...usuarios].sort((a, b) => b.criado_em - a.criado_em).map(publicUser);
           }
 
-          if (normalized.startsWith('SELECT id, nome, nome_exibicao, email, tipo, status_pagamento, criado_em, titulo_ativo, emoji_ativo, moldura, aura, efeito_nome, avatar')) {
-            return [...usuarios].sort((a, b) => b.criado_em - a.criado_em).map((u) => ({
-              id: u.id,
-              nome: u.nome,
-              nome_exibicao: u.nome_exibicao,
-              email: u.email,
-              tipo: u.tipo,
-              status_pagamento: u.status_pagamento,
-              criado_em: u.criado_em,
-              titulo_ativo: u.titulo_ativo,
-              emoji_ativo: u.emoji_ativo,
-              moldura: u.moldura,
-              aura: u.aura,
-              efeito_nome: u.efeito_nome,
-              avatar: u.avatar,
-              avatar_face: u.avatar_face,
-            }));
-          }
-
           if (normalized.startsWith('UPDATE usuarios SET status_pagamento = ?')) {
             const user = usuarios.find((u) => u.id === Number(params[1]) && u.tipo === 'user');
             if (user) user.status_pagamento = params[0];
-            return { affectedRows: user ? 1 : 0 };
-          }
-
-          if (normalized.startsWith('UPDATE usuarios SET titulo_ativo = ?, emoji_ativo = ?')) {
-            const user = usuarios.find((u) => u.id === Number(params[5]));
-            if (user) {
-              user.titulo_ativo = params[0];
-              user.emoji_ativo = params[1];
-              user.moldura = params[2];
-              user.aura = params[3];
-              user.efeito_nome = params[4];
-            }
             return { affectedRows: user ? 1 : 0 };
           }
 
@@ -521,16 +500,16 @@ if (process.env.USE_MEMORY_DB === 'true') {
                   return p.usuario_id === u.id && p.status_aposta === 'aprovado' && jogo?.status === 'finalizado' && isValidatedGame(p.jogo_id);
                 });
                 const acertos = validBets.filter((p) => p.pontos > 0).length;
-                const conquistas = validBets.filter((p) => p.pontos > 0 && p.pontos === maxPointsForGame(p.jogo_id)).length;
+                const melhoresPalpites = validBets.filter((p) => p.pontos > 0 && p.pontos === maxPointsForGame(p.jogo_id)).length;
                 return {
                   nome: u.nome,
                   pontos: validBets.reduce((sum, p) => sum + p.pontos, 0),
                   apostas: validBets.length,
                   acertos,
-                  conquistas,
+                  melhoresPalpites,
                 };
               })
-              .sort((a, b) => b.conquistas - a.conquistas || b.acertos - a.acertos || b.apostas - a.apostas || b.pontos - a.pontos || a.nome.localeCompare(b.nome));
+              .sort((a, b) => b.melhoresPalpites - a.melhoresPalpites || b.acertos - a.acertos || b.apostas - a.apostas || b.pontos - a.pontos || a.nome.localeCompare(b.nome));
           }
 
           if (normalized.startsWith('SELECT p.*, u.nome, u.email, u.status_pagamento')) {
@@ -616,11 +595,6 @@ if (process.env.USE_MEMORY_DB === 'true') {
                   nome_exibicao: user?.nome_exibicao,
                   avatar: user?.avatar,
                   avatar_face: user?.avatar_face,
-                  titulo_ativo: user?.titulo_ativo,
-                  emoji_ativo: user?.emoji_ativo,
-                  moldura: user?.moldura,
-                  aura: user?.aura,
-                  efeito_nome: user?.efeito_nome,
                   time_casa: jogo?.time_casa,
                   time_fora: jogo?.time_fora,
                   placar_casa: jogo?.placar_casa,
@@ -666,28 +640,6 @@ if (process.env.USE_MEMORY_DB === 'true') {
             const palpite = palpites.find((p) => p.id === Number(params[1]));
             if (palpite) palpite.pontos = Number(params[0]);
             return { affectedRows: palpite ? 1 : 0 };
-          }
-
-          if (normalized.startsWith('INSERT INTO usuario_conquistas')) {
-            const usuarioId = Number(params[0]);
-            const conquistaId = Number(params[1]);
-            const registro = usuarioConquistas.find((c) => c.usuario_id === usuarioId && c.conquista_id === conquistaId);
-            if (registro) {
-              registro.progresso = Number(params[2] || 0);
-              if (!registro.desbloqueada_em && params[3]) registro.desbloqueada_em = params[3];
-              registro.exibida = 1;
-            } else {
-              usuarioConquistas.push({
-                id: usuarioConquistas.length + 1,
-                usuario_id: usuarioId,
-                conquista_id: conquistaId,
-                progresso: Number(params[2] || 0),
-                desbloqueada_em: params[3] || null,
-                equipada: 0,
-                exibida: 1,
-              });
-            }
-            return { affectedRows: 1 };
           }
 
           throw new Error(`Consulta não suportada no banco em memória: ${normalized}`);

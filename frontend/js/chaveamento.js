@@ -97,11 +97,11 @@ function renderFinal(jogo, premios) {
   if (!jogo) {
     return `
       <div class="final-card">
-        <img class="bracket-trophy" src="/assets/trophy-login.png" alt="Trof&eacute;u">
+        <img class="bracket-trophy" src="/assets/trophy-login.png" alt="Troféu">
         <div class="trophy">Final</div>
         <h2>A definir</h2>
-        <div class="final-prize"><small>Pr&ecirc;mio acumulado da final</small><strong>${dinheiro(premios.final)}</strong></div>
-        <p class="text-muted">Final sem palpite vencedor: acumulado + arrecadação da final; 20% vai para o ranking e 80% para a plataforma.</p>
+        <div class="final-prize"><small>Prêmio acumulado da final</small><strong>${dinheiro(premios.final)}</strong></div>
+        <p class="text-muted">Final sem palpite vencedor: não há rateio de premiação.</p>
         <p class="text-muted">Cadastre um jogo com fase final para preencher este bloco.</p>
       </div>
     `;
@@ -110,11 +110,11 @@ function renderFinal(jogo, premios) {
   const bandeiraFora = jogo.escudo_fora || obterUrlBandeira(jogo.time_fora);
   return `
     <div class="final-card">
-      <img class="bracket-trophy" src="/assets/trophy-login.png" alt="Trof&eacute;u">
+      <img class="bracket-trophy" src="/assets/trophy-login.png" alt="Troféu">
       <div class="trophy">Final</div>
       <h2>Copa 2026</h2>
-      <div class="final-prize"><small>Pr&ecirc;mio acumulado da final</small><strong>${dinheiro(premios.final)}</strong></div>
-      <p class="text-muted">Final sem palpite vencedor: acumulado + arrecadação da final; 20% vai para o ranking e 80% para a plataforma.</p>
+      <div class="final-prize"><small>Prêmio acumulado da final</small><strong>${dinheiro(premios.final)}</strong></div>
+      <p class="text-muted">Final sem palpite vencedor: não há rateio de premiação.</p>
       <div class="team-final-row ${winnerClass(jogo, 'casa') ? 'champion' : ''}">
         ${bandeiraCasa ? `<img src="${bandeiraCasa}" alt="${jogo.time_casa}" class="bracket-flag-large">` : ''}
         <span>${jogo.time_casa}</span>

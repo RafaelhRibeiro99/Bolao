@@ -2,9 +2,6 @@
 const pool = require('../config/db');
 const { auth, adminOnly } = require('../middleware/auth');
 const { calcularPontos } = require('../services/pontuacao');
-const { processAchievements } = require('../services/achievementEngine');
-const { CONQUISTAS } = require('../services/conquistas');
-const { seedConquistas } = require('../scripts/seed-conquistas');
 const fs = require('fs');
 const path = require('path');
 
@@ -12,6 +9,13 @@ const router = express.Router();
 router.use(auth, adminOnly);
 
 const ESCUDOS_DIR = path.join(__dirname, '../../frontend/assets/times');
+const API_FOOTBALL_BASE_URL = process.env.APISPORTS_BASE_URL || 'https://v3.football.api-sports.io';
+const WORLD_CUP_LEAGUE_ID = Number(process.env.APISPORTS_WORLD_CUP_LEAGUE_ID || 1);
+const WORLD_CUP_SEASON = Number(process.env.APISPORTS_WORLD_CUP_SEASON || 2026);
+const OPENLIGADB_BASE_URL = process.env.OPENLIGADB_BASE_URL || 'https://api.openligadb.de';
+const OPENLIGADB_LEAGUE_SHORTCUT = process.env.OPENLIGADB_LEAGUE_SHORTCUT || 'wmk';
+const OPENLIGADB_SEASON = Number(process.env.OPENLIGADB_SEASON || 2022);
+const WIKIPEDIA_API_URL = process.env.WIKIPEDIA_API_URL || 'https://en.wikipedia.org/w/api.php';
 
 const TIMES_PADRAO = [
   'África do Sul',
@@ -145,6 +149,283 @@ function serializarJogoData(row) {
   return row?.data_jogo ? { ...row, data_jogo: formatarDataHoraLocal(row.data_jogo) } : row;
 }
 
+function dataHoraSaoPaulo(valor) {
+  const date = new Date(valor);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date).reduce((acc, part) => {
+    acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+}
+
+function fasePorRodadaApi(round = '') {
+  const texto = String(round).toLowerCase();
+  if (texto.includes('final') && !texto.includes('semi')) return 'final';
+  if (texto.includes('semi')) return 'semifinal';
+  if (texto.includes('quarter')) return 'quartas';
+  if (texto.includes('round of 16') || texto.includes('oitavas')) return 'oitavas';
+  if (texto.includes('round of 32') || texto.includes('32')) return '16_avos';
+  return 'fase_grupos';
+}
+
+function mapearFixtureApi(item) {
+  return {
+    fixture_id: item.fixture?.id,
+    time_casa: item.teams?.home?.name || '',
+    time_fora: item.teams?.away?.name || '',
+    codigo_casa: item.teams?.home?.code || null,
+    codigo_fora: item.teams?.away?.code || null,
+    bandeira_casa: item.teams?.home?.logo || null,
+    bandeira_fora: item.teams?.away?.logo || null,
+    data_jogo: dataHoraSaoPaulo(item.fixture?.date),
+    data_api: item.fixture?.date || null,
+    fase: fasePorRodadaApi(item.league?.round),
+    rodada: item.league?.round || '',
+    status: item.fixture?.status?.short || item.fixture?.status?.long || '',
+    gols_casa: item.goals?.home ?? null,
+    gols_fora: item.goals?.away ?? null,
+    estadio: item.fixture?.venue?.name || '',
+    cidade: item.fixture?.venue?.city || '',
+  };
+}
+
+function placarOpenLigaDB(item) {
+  const resultadoTempoNormal = (item.matchResults || []).find((result) => {
+    const nome = String(result.resultName || '').toLowerCase();
+    return nome.includes('regul') || nome.includes('endergebnis');
+  }) || (item.matchResults || [])[0];
+  return {
+    casa: resultadoTempoNormal?.pointsTeam1 ?? null,
+    fora: resultadoTempoNormal?.pointsTeam2 ?? null,
+  };
+}
+
+function fasePorGrupoOpenLigaDB(groupName = '') {
+  const texto = String(groupName).toLowerCase();
+  if (texto.includes('finale') && !texto.includes('halb')) return 'final';
+  if (texto.includes('halbfinale')) return 'semifinal';
+  if (texto.includes('viertelfinale')) return 'quartas';
+  if (texto.includes('achtelfinale')) return 'oitavas';
+  return 'fase_grupos';
+}
+
+function traduzirTimeOpenLigaDB(nome) {
+  const mapa = {
+    Argentinien: 'Argentina',
+    Australien: 'Austrália',
+    Belgien: 'Bélgica',
+    Brasilien: 'Brasil',
+    Dänemark: 'Dinamarca',
+    Deutschland: 'Alemanha',
+    Ecuador: 'Equador',
+    England: 'Inglaterra',
+    Frankreich: 'França',
+    Japan: 'Japão',
+    Kanada: 'Canadá',
+    Kamerun: 'Camarões',
+    Katar: 'Qatar',
+    Kroatien: 'Croácia',
+    Marokko: 'Marrocos',
+    Mexiko: 'México',
+    Niederlande: 'Países Baixos',
+    Polen: 'Polônia',
+    Portugal: 'Portugal',
+    Schweiz: 'Suíça',
+    Senegal: 'Senegal',
+    Serbien: 'Sérvia',
+    Spanien: 'Espanha',
+    Südkorea: 'Coreia do Sul',
+    Tunesien: 'Tunísia',
+    Uruguay: 'Uruguai',
+    USA: 'Estados Unidos',
+    Wales: 'País de Gales',
+  };
+  return mapa[nome] || nome;
+}
+
+function mapearOpenLigaDB(item) {
+  const placar = placarOpenLigaDB(item);
+  const timeCasa = traduzirTimeOpenLigaDB(item.team1?.teamName || '');
+  const timeFora = traduzirTimeOpenLigaDB(item.team2?.teamName || '');
+  return {
+    fixture_id: item.matchID,
+    time_casa: timeCasa,
+    time_fora: timeFora,
+    codigo_casa: item.team1?.shortName || null,
+    codigo_fora: item.team2?.shortName || null,
+    bandeira_casa: item.team1?.teamIconUrl || null,
+    bandeira_fora: item.team2?.teamIconUrl || null,
+    data_jogo: dataHoraSaoPaulo(item.matchDateTimeUTC || item.matchDateTime),
+    data_api: item.matchDateTimeUTC || item.matchDateTime || null,
+    fase: fasePorGrupoOpenLigaDB(item.group?.groupName),
+    rodada: item.group?.groupName || item.leagueName || '',
+    status: item.matchIsFinished ? 'FT' : 'NS',
+    gols_casa: placar.casa,
+    gols_fora: placar.fora,
+    estadio: item.location?.locationStadium || '',
+    cidade: item.location?.locationCity || '',
+    fonte: 'OpenLigaDB',
+  };
+}
+
+const FIFA_CODE_NAMES_PT = {
+  ARG: 'Argentina',
+  AUS: 'Austrália',
+  AUT: 'Áustria',
+  BEL: 'Bélgica',
+  BIH: 'Bósnia e Herzegovina',
+  BRA: 'Brasil',
+  CAN: 'Canadá',
+  CIV: 'Costa do Marfim',
+  CMR: 'Camarões',
+  COL: 'Colômbia',
+  CPV: 'Cabo Verde',
+  CRO: 'Croácia',
+  CUR: 'Curaçao',
+  CZE: 'República Tcheca',
+  DEN: 'Dinamarca',
+  ECU: 'Equador',
+  EGY: 'Egito',
+  ENG: 'Inglaterra',
+  ESP: 'Espanha',
+  FRA: 'França',
+  GER: 'Alemanha',
+  GHA: 'Gana',
+  HAI: 'Haiti',
+  IRN: 'Irã',
+  IRQ: 'Iraque',
+  JOR: 'Jordânia',
+  JPN: 'Japão',
+  KOR: 'Coreia do Sul',
+  MAR: 'Marrocos',
+  MEX: 'México',
+  NED: 'Países Baixos',
+  NGA: 'Nigéria',
+  NOR: 'Noruega',
+  NZL: 'Nova Zelândia',
+  PAN: 'Panamá',
+  PAR: 'Paraguai',
+  POL: 'Polônia',
+  POR: 'Portugal',
+  QAT: 'Qatar',
+  RSA: 'África do Sul',
+  KSA: 'Arábia Saudita',
+  SCO: 'Escócia',
+  SEN: 'Senegal',
+  SRB: 'Sérvia',
+  SUI: 'Suíça',
+  SWE: 'Suécia',
+  TUN: 'Tunísia',
+  TUR: 'Turquia',
+  UKR: 'Ucrânia',
+  URU: 'Uruguai',
+  USA: 'Estados Unidos',
+  UZB: 'Uzbequistão',
+  WAL: 'País de Gales',
+};
+
+function extrairCodigoFifa(linha = '') {
+  const match = String(linha).match(/\|([A-Z]{2,3})\s*}}/);
+  return match ? match[1] : null;
+}
+
+function extrairDataWikipedia(linha = '') {
+  const match = String(linha).match(/Start date\|(\d{4})\|(\d{1,2})\|(\d{1,2})/i);
+  if (!match) return null;
+  return {
+    ano: Number(match[1]),
+    mes: Number(match[2]),
+    dia: Number(match[3]),
+  };
+}
+
+function extrairHorarioWikipedia(linha = '') {
+  const texto = String(linha).replace(/&nbsp;/g, ' ');
+  const match = texto.match(/(\d{1,2}):(\d{2})\s*(a\.m\.|p\.m\.).*UTC([−-])(\d{1,2})/i);
+  if (!match) return { hora: 12, minuto: 0, offset: 0 };
+  let hora = Number(match[1]);
+  const minuto = Number(match[2]);
+  const periodo = match[3].toLowerCase();
+  if (periodo === 'p.m.' && hora !== 12) hora += 12;
+  if (periodo === 'a.m.' && hora === 12) hora = 0;
+  const sinal = match[4] === '−' || match[4] === '-' ? -1 : 1;
+  const offset = sinal * Number(match[5]);
+  return { hora, minuto, offset };
+}
+
+function dataWikipediaParaSaoPaulo(data, horario) {
+  if (!data) return null;
+  const utcMs = Date.UTC(data.ano, data.mes - 1, data.dia, horario.hora - horario.offset, horario.minuto, 0);
+  return dataHoraSaoPaulo(new Date(utcMs).toISOString());
+}
+
+function extrairPlacarWikipedia(linha = '') {
+  const match = String(linha).match(/(\d+)\s*[–-]\s*(\d+)/);
+  if (!match) return { casa: null, fora: null };
+  return { casa: Number(match[1]), fora: Number(match[2]) };
+}
+
+function parseJogosWikipedia(wikitext, pageTitle) {
+  const jogos = [];
+  const linhas = String(wikitext || '').split(/\r?\n/);
+  let atual = {};
+  for (const linha of linhas) {
+    if (linha.startsWith('|date=')) atual.data = extrairDataWikipedia(linha);
+    if (linha.startsWith('|time=')) atual.horario = extrairHorarioWikipedia(linha);
+    if (linha.startsWith('|team1=')) atual.codigoCasa = extrairCodigoFifa(linha);
+    if (linha.startsWith('|score=')) atual.placar = extrairPlacarWikipedia(linha);
+    if (linha.startsWith('|team2=')) {
+      atual.codigoFora = extrairCodigoFifa(linha);
+      if (atual.data && atual.codigoCasa && atual.codigoFora) {
+        const fase = pageTitle.includes('knockout') ? 'oitavas' : 'fase_grupos';
+        const rodada = pageTitle.includes('Group_')
+          ? `Grupo ${pageTitle.split('Group_')[1]}`
+          : 'Mata-mata';
+        jogos.push({
+          fixture_id: `wiki-${pageTitle}-${jogos.length + 1}`,
+          time_casa: FIFA_CODE_NAMES_PT[atual.codigoCasa] || atual.codigoCasa,
+          time_fora: FIFA_CODE_NAMES_PT[atual.codigoFora] || atual.codigoFora,
+          codigo_casa: atual.codigoCasa,
+          codigo_fora: atual.codigoFora,
+          bandeira_casa: null,
+          bandeira_fora: null,
+          data_jogo: dataWikipediaParaSaoPaulo(atual.data, atual.horario || { hora: 12, minuto: 0, offset: 0 }),
+          data_api: null,
+          fase,
+          rodada,
+          status: atual.placar?.casa === null ? 'NS' : 'FT',
+          gols_casa: atual.placar?.casa ?? null,
+          gols_fora: atual.placar?.fora ?? null,
+          estadio: '',
+          cidade: '',
+          fonte: 'Wikipedia 2026',
+        });
+      }
+      atual = {};
+    }
+  }
+  return jogos;
+}
+
+async function garantirTimeApi(conn, nome, codigo, escudo) {
+  const nomeFinal = String(nome || '').trim();
+  if (!nomeFinal) return;
+  const existente = await conn.query('SELECT id FROM times WHERE LOWER(nome) = LOWER(?)', [nomeFinal]);
+  if (!existente.length) {
+    await conn.query('INSERT INTO times (nome, codigo, escudo) VALUES (?, ?, ?)', [nomeFinal, codigo || null, escudo || null]);
+  }
+}
+
 function palpitePlacarExato(jogo, palpite) {
   return Number(jogo.placar_casa) === Number(palpite.palpite_casa)
     && Number(jogo.placar_fora) === Number(palpite.palpite_fora);
@@ -156,8 +437,8 @@ function calcularResumoFinanceiroJogo(jogo, palpites) {
     ? aprovadas.filter((palpite) => palpitePlacarExato(jogo, palpite))
     : [];
   const arrecadado = aprovadas.length * 5;
-  const premioBase = arrecadado * 0.8;
-  const taxaPlataforma = arrecadado * 0.2;
+  const premioBase = arrecadado;
+  const taxaPlataforma = 0;
   const premioTotal = vencedores.length
     ? premioBase + (jogo.fase === 'final' ? Number(jogo.premio_acumulado || 0) : 0)
     : 0;
@@ -175,19 +456,6 @@ function calcularResumoFinanceiroJogo(jogo, palpites) {
     plataforma: taxaPlataforma,
   };
 }
-
-router.get('/conquistas', async (_req, res) => {
-  res.json(CONQUISTAS);
-});
-
-router.post('/conquistas/seed', async (_req, res) => {
-  try {
-    await seedConquistas();
-    res.json({ message: `${CONQUISTAS.length} conquistas cadastradas/atualizadas.` });
-  } catch (error) {
-    res.status(500).json({ message: error.message || 'Erro ao popular conquistas.' });
-  }
-});
 
 router.get('/usuarios', async (_req, res) => {
   let conn;
@@ -313,14 +581,6 @@ router.put('/apostas/:id/status', async (req, res) => {
 
     const apostaAtualizadaRows = await conn.query('SELECT motivo_reprovacao FROM palpites WHERE id = ?', [req.params.id]);
     const motivoAtualizado = apostaAtualizadaRows[0]?.motivo_reprovacao || null;
-    if (status === 'aprovado') {
-      const usuarioId = apostaAtual.usuario_id;
-      try {
-        await processAchievements(usuarioId);
-      } catch (achievementError) {
-        console.warn('Não foi possível processar conquistas após aprovar aposta:', achievementError.message);
-      }
-    }
     res.json({
       message: 'Status da aposta atualizado.',
       motivo_reprovacao: motivoAtualizado,
@@ -427,6 +687,166 @@ router.get('/jogos', async (_req, res) => {
     res.json(rows);
   } catch {
     res.status(500).json({ message: 'Erro ao listar jogos.' });
+  } finally { if (conn) conn.release(); }
+});
+
+router.get('/api-football/jogos', async (req, res) => {
+  const apiKey = process.env.APISPORTS_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ message: 'Configure APISPORTS_KEY no arquivo .env para buscar jogos da Copa.' });
+  }
+
+  const season = Number(req.query.season || WORLD_CUP_SEASON);
+  const league = Number(req.query.league || WORLD_CUP_LEAGUE_ID);
+  const live = req.query.live === 'all';
+  const url = new URL('/fixtures', API_FOOTBALL_BASE_URL);
+  url.searchParams.set('league', String(league));
+  url.searchParams.set('season', String(season));
+  if (live) url.searchParams.set('live', 'all');
+
+  try {
+    const resposta = await fetch(url, {
+      method: 'GET',
+      headers: { 'x-apisports-key': apiKey },
+    });
+    const dados = await resposta.json().catch(() => ({}));
+    if (!resposta.ok) {
+      return res.status(502).json({ message: dados.message || 'Erro ao consultar API-Football.' });
+    }
+    if (dados.errors && Object.keys(dados.errors).length) {
+      return res.status(502).json({ message: `API-Football retornou erro: ${JSON.stringify(dados.errors)}` });
+    }
+    res.json({
+      league,
+      season,
+      jogos: (dados.response || []).map(mapearFixtureApi).filter((jogo) => jogo.time_casa && jogo.time_fora && jogo.data_jogo),
+    });
+  } catch (error) {
+    console.error('Erro ao buscar jogos na API-Football:', error);
+    res.status(502).json({ message: 'Não foi possível buscar os jogos da Copa agora.' });
+  }
+});
+
+router.get('/openligadb/jogos', async (req, res) => {
+  const shortcut = String(req.query.shortcut || OPENLIGADB_LEAGUE_SHORTCUT);
+  const season = Number(req.query.season || OPENLIGADB_SEASON);
+  const url = new URL(`/getmatchdata/${encodeURIComponent(shortcut)}/${encodeURIComponent(String(season))}`, OPENLIGADB_BASE_URL);
+
+  try {
+    const resposta = await fetch(url, { method: 'GET' });
+    const dados = await resposta.json().catch(() => []);
+    if (!resposta.ok) {
+      return res.status(502).json({ message: 'Erro ao consultar OpenLigaDB.' });
+    }
+    res.json({
+      shortcut,
+      season,
+      jogos: (Array.isArray(dados) ? dados : []).map(mapearOpenLigaDB).filter((jogo) => jogo.time_casa && jogo.time_fora && jogo.data_jogo),
+    });
+  } catch (error) {
+    console.error('Erro ao buscar jogos na OpenLigaDB:', error);
+    res.status(502).json({ message: 'Não foi possível buscar os jogos na OpenLigaDB agora.' });
+  }
+});
+
+router.get('/wikipedia2026/jogos', async (_req, res) => {
+  const paginas = [
+    '2026_FIFA_World_Cup_Group_A',
+    '2026_FIFA_World_Cup_Group_B',
+    '2026_FIFA_World_Cup_Group_C',
+    '2026_FIFA_World_Cup_Group_D',
+    '2026_FIFA_World_Cup_Group_E',
+    '2026_FIFA_World_Cup_Group_F',
+    '2026_FIFA_World_Cup_Group_G',
+    '2026_FIFA_World_Cup_Group_H',
+    '2026_FIFA_World_Cup_Group_I',
+    '2026_FIFA_World_Cup_Group_J',
+    '2026_FIFA_World_Cup_Group_K',
+    '2026_FIFA_World_Cup_Group_L',
+    '2026_FIFA_World_Cup_knockout_stage',
+  ];
+
+  try {
+    const resultados = [];
+    for (const page of paginas) {
+      const url = new URL(WIKIPEDIA_API_URL);
+      url.searchParams.set('action', 'parse');
+      url.searchParams.set('page', page);
+      url.searchParams.set('prop', 'wikitext');
+      url.searchParams.set('format', 'json');
+      url.searchParams.set('formatversion', '2');
+      url.searchParams.set('origin', '*');
+
+      const resposta = await fetch(url, { method: 'GET' });
+      const dados = await resposta.json().catch(() => ({}));
+      if (!resposta.ok || dados.error) continue;
+      resultados.push(...parseJogosWikipedia(dados.parse?.wikitext || '', page));
+    }
+
+    res.json({
+      source: 'Wikipedia',
+      season: 2026,
+      jogos: resultados.filter((jogo) => jogo.time_casa && jogo.time_fora && jogo.data_jogo),
+    });
+  } catch (error) {
+    console.error('Erro ao buscar jogos na Wikipedia:', error);
+    res.status(502).json({ message: 'Não foi possível buscar os jogos da Copa 2026 na Wikipedia agora.' });
+  }
+});
+
+router.post('/api-football/jogos/importar', async (req, res) => {
+  const jogo = {
+    fixture_id: req.body.fixture_id,
+    time_casa: String(req.body.time_casa || '').trim(),
+    time_fora: String(req.body.time_fora || '').trim(),
+    data_jogo: String(req.body.data_jogo || '').trim(),
+    fase: req.body.fase || 'fase_grupos',
+    codigo_casa: req.body.codigo_casa || null,
+    codigo_fora: req.body.codigo_fora || null,
+    bandeira_casa: req.body.bandeira_casa || null,
+    bandeira_fora: req.body.bandeira_fora || null,
+  };
+  if (!jogo.time_casa || !jogo.time_fora || !jogo.data_jogo) {
+    return res.status(400).json({ message: 'Dados do jogo incompletos para importação.' });
+  }
+  if (jogo.time_casa === jogo.time_fora) {
+    return res.status(400).json({ message: 'A partida importada precisa ter dois times diferentes.' });
+  }
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await garantirTimes(conn);
+    await garantirTimeApi(conn, jogo.time_casa, jogo.codigo_casa, jogo.bandeira_casa);
+    await garantirTimeApi(conn, jogo.time_fora, jogo.codigo_fora, jogo.bandeira_fora);
+
+    const existentes = await conn.query('SELECT * FROM jogos ORDER BY data_jogo ASC');
+    const jaExiste = existentes.find((item) => (
+      String(item.time_casa).toLowerCase() === jogo.time_casa.toLowerCase()
+      && String(item.time_fora).toLowerCase() === jogo.time_fora.toLowerCase()
+      && String(item.data_jogo).slice(0, 16) === jogo.data_jogo.slice(0, 16)
+    ));
+    if (jaExiste) {
+      return res.json({ message: 'Este jogo já estava cadastrado.', jogo: serializarJogoData(jaExiste), existente: true });
+    }
+
+    await conn.query(
+      'INSERT INTO jogos (time_casa, time_fora, data_jogo, fase, status, liberado_palpite, codigo_casa, codigo_fora, bandeira_casa, bandeira_fora) VALUES (?, ?, ?, ?, "aberto", 0, ?, ?, ?, ?)',
+      [
+        jogo.time_casa,
+        jogo.time_fora,
+        jogo.data_jogo,
+        jogo.fase,
+        jogo.codigo_casa,
+        jogo.codigo_fora,
+        jogo.bandeira_casa,
+        jogo.bandeira_fora,
+      ]
+    );
+    res.status(201).json({ message: 'Jogo importado. Libere manualmente quando quiser abrir apostas.' });
+  } catch (error) {
+    console.error('Erro ao importar jogo da API-Football:', error);
+    res.status(500).json({ message: 'Erro ao importar jogo da API-Football.' });
   } finally { if (conn) conn.release(); }
 });
 
@@ -562,12 +982,10 @@ router.post('/jogos/:id/calcular', async (req, res) => {
     if (!jogos.length) return res.status(400).json({ message: 'Jogo ainda não finalizado.' });
 
     const palpites = await conn.query('SELECT * FROM palpites WHERE jogo_id = ? AND status_aposta = "aprovado"', [req.params.id]);
-    const usuariosValidos = new Set(palpites.map((palpite) => Number(palpite.usuario_id)));
-    if (usuariosValidos.size < 5) {
-      return res.status(400).json({ message: 'Jogo não validado: são necessários pelo menos 5 usuários diferentes com apostas aprovadas.' });
+    if (palpites.length < 2) {
+      return res.status(400).json({ message: 'Jogo não validado: são necessários pelo menos 2 palpites aprovados.' });
     }
 
-    const usuariosDistintos = [...new Set(palpites.map((p) => p.usuario_id))];
     const pontosPorPalpite = new Map();
     for (const palpite of palpites) {
       const pontos = calcularPontos(jogos[0], palpite);
@@ -581,23 +999,19 @@ router.post('/jogos/:id/calcular', async (req, res) => {
     const isFinal = jogo.fase === 'final';
     const totalApostas = palpites.length;
     const arrecadado = totalApostas * 5;
-    const premioBase = arrecadado * 0.8;
-    const taxaPlataforma = arrecadado * 0.2;
+    const premioBase = arrecadado;
+    const taxaPlataforma = 0;
     const premioAcumuladoFinal = Number(jogo.premio_acumulado || 0);
     const baseFinalSemVencedor = premioAcumuladoFinal + arrecadado;
     const acumuloFinal = semVencedor && !isFinal ? premioBase : 0;
-    const acumuloRanking = semVencedor ? (isFinal ? baseFinalSemVencedor * 0.2 : taxaPlataforma) : 0;
-    const valorPlataformaFinal = semVencedor && isFinal ? baseFinalSemVencedor * 0.8 : 0;
+    const acumuloRanking = 0;
+    const valorPlataformaFinal = 0;
 
     if (semVencedor && !isFinal) {
       await conn.query(
-        'UPDATE jogos SET premio_acumulado = premio_acumulado + ?, taxa_admin = taxa_admin + ? WHERE fase = "final"',
-        [acumuloFinal, acumuloRanking]
+        'UPDATE jogos SET premio_acumulado = premio_acumulado + ? WHERE fase = "final"',
+        [acumuloFinal]
       );
-    }
-
-    if (semVencedor && isFinal) {
-      await conn.query('UPDATE jogos SET taxa_admin = taxa_admin + ? WHERE id = ?', [acumuloRanking, req.params.id]);
     }
 
     if (semVencedor && isFinal) {
@@ -606,21 +1020,13 @@ router.post('/jogos/:id/calcular', async (req, res) => {
 
     await conn.query('UPDATE jogos SET jogo_validado = 1 WHERE id = ?', [req.params.id]);
 
-    for (const usuarioId of usuariosDistintos) {
-      try {
-        await processAchievements(usuarioId);
-      } catch (achievementError) {
-        console.warn('Não foi possível processar conquistas após calcular pontuação:', achievementError.message);
-      }
-    }
-
     const taxa = semVencedor ? acumuloRanking : taxaPlataforma;
     const premiacao = semVencedor ? acumuloFinal : premioBase + (isFinal ? premioAcumuladoFinal : 0);
     let message;
     if (semVencedor && !isFinal) {
-      message = `Pontuação calculada. Sem palpite vencedor: R$ ${acumuloRanking.toFixed(2)} para o 1º lugar do ranking e R$ ${acumuloFinal.toFixed(2)} acumulados para a final.`;
+      message = `Pontuação calculada. Sem palpite vencedor: R$ ${acumuloFinal.toFixed(2)} acumulados para a final.`;
     } else if (semVencedor && isFinal) {
-      message = `Pontuação calculada. Final sem palpite vencedor: R$ ${acumuloRanking.toFixed(2)} para o 1º lugar do ranking e R$ ${valorPlataformaFinal.toFixed(2)} destinados à plataforma.`;
+      message = `Pontuação calculada. Final sem palpite vencedor: não há rateio de premiação.`;
     } else {
       message = `Pontuação calculada. Apostas aprovadas: ${totalApostas}. Prêmio do jogo: R$ ${premiacao.toFixed(2)}.`;
     }

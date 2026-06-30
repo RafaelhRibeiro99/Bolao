@@ -14,9 +14,7 @@
         <a href="/dashboard.html">Painel</a>
         <a href="/jogos.html">Jogos</a>
         <a href="/chaveamento.html">Chaveamento</a>
-        <a href="/ranking.html">Ranking</a>
-        <a href="/conquistas.html">Conquistas</a>
-        <a href="/transparencia.html">Transpar&ecirc;ncia</a>
+        <a href="/transparencia.html">Transparência</a>
         <a href="/perfil.html">Perfil</a>
         <a href="/regras.html">Regras</a>
         <a href="#" onclick="logout()">Sair</a>
@@ -25,7 +23,7 @@
   </nav>
   <main class="container auth-layout">
     <section class="auth-card">
-      <h1>🎯 Fazer aposta</h1>
+      <h1>Fazer aposta</h1>
       <div id="jogoInfo"></div>
       <form id="formAposta">
         <label id="labelCasa">Casa<input id="placarCasa" type="number" min="0" required></label>
@@ -35,10 +33,10 @@
       <div id="mensagem"></div>
     </section>
   </main>
-  <footer class="footer">⚽ Bolão Copa do Mundo 2026</footer>
+  <footer class="footer">Bolão Copa do Mundo 2026</footer>
   <div id="pixModal" class="payment-modal hidden" role="dialog" aria-modal="true" aria-labelledby="pixModalTitle">
     <div class="payment-modal-panel">
-      <button id="fecharPixModal" class="modal-close" type="button" aria-label="Fechar">x</button>
+      <button id="fecharPixModal" class="modal-close" type="button" aria-label="Fechar">&times;</button>
       <span class="status-badge pendente">Pagamento pendente</span>
       <h2 id="pixModalTitle">Finalize sua aposta via Pix</h2>
       <p id="pixApostaCodigo" class="text-muted"></p>
@@ -50,11 +48,11 @@
         <button id="copiarPixPagamento" class="secondary" type="button">Copiar chave</button>
       </div>
       <div class="payment-details">
-        <p><strong>Nome:</strong> Marcus Andr&eacute; Leite</p>
+        <p><strong>Nome:</strong> Marcus André Leite</p>
         <p><strong>Banco:</strong> Nubank</p>
         <p><strong>Valor:</strong> R$ 5,00 por aposta</p>
       </div>
-      <p class="payment-warning">A aposta ficar&aacute; pendente e s&oacute; ser&aacute; v&aacute;lida ap&oacute;s a confirma&ccedil;&atilde;o do pagamento e aprova&ccedil;&atilde;o do administrador.</p>
+      <p class="payment-warning">A aposta ficará pendente e só será válida após a confirmação do pagamento e aprovação do administrador.</p>
       <button id="entendiPixPagamento" class="primary" type="button">Entendi</button>
     </div>
   </div>

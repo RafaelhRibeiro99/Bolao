@@ -58,13 +58,15 @@ function arquivoPngParaDataUrl(file) {
 let timesAdminCache = [];
 let apostasAdminCache = [];
 let jogosAdminCache = [];
+let jogosApiCopaCache = [];
+let jogosApiFonteAtual = '';
 let jogoEmEdicaoId = null;
 let jogoApostasModalId = null;
 let relatoriosAdminCache = null;
 
 function telaAdminAtual() {
   const tela = String(location.hash || '#usuarios').replace('#', '');
-  return ['usuarios', 'apostas', 'times', 'jogos', 'relatorios', 'conquistas', 'transparencia', 'area-usuario'].includes(tela)
+  return ['usuarios', 'apostas', 'times', 'jogos', 'relatorios', 'transparencia', 'area-usuario'].includes(tela)
     ? tela
     : 'usuarios';
 }
@@ -103,22 +105,120 @@ function formatarFase(fase) {
   return faseLabels[fase] || fase || 'Fase de grupos';
 }
 
+function jogoLocalPorApi(jogoApi) {
+  return jogosAdminCache.find((jogo) => (
+    String(jogo.time_casa).toLowerCase() === String(jogoApi.time_casa).toLowerCase()
+    && String(jogo.time_fora).toLowerCase() === String(jogoApi.time_fora).toLowerCase()
+    && String(jogo.data_jogo).slice(0, 16) === String(jogoApi.data_jogo).slice(0, 16)
+  ));
+}
+
+function filtrarJogosApi() {
+  const termo = document.getElementById('buscaJogosApi')?.value.trim().toLowerCase() || '';
+  if (!termo) return jogosApiCopaCache;
+  return jogosApiCopaCache.filter((jogo) => [
+    jogo.time_casa,
+    jogo.time_fora,
+    formatarFase(jogo.fase),
+    jogo.rodada,
+    formatarDataHoraJogo(jogo.data_jogo),
+  ].some((valor) => String(valor || '').toLowerCase().includes(termo)));
+}
+
+function renderizarJogosApiCopa() {
+  const destino = document.getElementById('jogosApiCopa');
+  if (!destino) return;
+  const jogos = filtrarJogosApi();
+  destino.innerHTML = jogos.map((jogo, index) => {
+    const local = jogoLocalPorApi(jogo);
+    return `
+      <article class="api-fixture-card ${local ? 'api-fixture-imported' : ''}">
+        <div class="api-fixture-status">
+          <span class="badge">${escapeHtml(formatarFase(jogo.fase))}</span>
+          <span class="status-badge ${local?.liberado_palpite ? 'pago' : 'pendente'}">${local ? (local.liberado_palpite ? 'Liberado' : 'Importado') : 'Na API'}</span>
+        </div>
+        <div class="api-fixture-teams">
+          <div>${jogo.bandeira_casa ? `<img src="${escapeHtml(jogo.bandeira_casa)}" alt="${escapeHtml(jogo.time_casa)}">` : ''}<strong>${escapeHtml(jogo.time_casa)}</strong></div>
+          <span>${jogo.gols_casa ?? '-'} x ${jogo.gols_fora ?? '-'}</span>
+          <div>${jogo.bandeira_fora ? `<img src="${escapeHtml(jogo.bandeira_fora)}" alt="${escapeHtml(jogo.time_fora)}">` : ''}<strong>${escapeHtml(jogo.time_fora)}</strong></div>
+        </div>
+        <div class="api-fixture-meta">
+          <span>${formatarDataHoraJogo(jogo.data_jogo)}</span>
+          <span>${escapeHtml(jogo.rodada || 'Copa do Mundo')}</span>
+          ${jogo.estadio ? `<span>${escapeHtml(jogo.estadio)}</span>` : ''}
+        </div>
+        <div class="actions">
+          ${local
+            ? `<button class="secondary" type="button" onclick="liberarJogo(${local.id}, true)">Liberar apostas</button>`
+            : `<button class="primary" type="button" onclick="importarJogoApiCopa(${index})">Importar</button>`}
+        </div>
+      </article>
+    `;
+  }).join('') || '<p class="text-muted">Nenhum jogo encontrado. Clique em buscar ou ajuste o filtro.</p>';
+}
+
+async function carregarJogosApiCopa() {
+  try {
+    msg('apiCopaMsg', 'Buscando jogos na API-Football...', 'success');
+    const data = await request('/admin/api-football/jogos');
+    jogosApiCopaCache = data.jogos || [];
+    jogosApiFonteAtual = `API-Football ${data.season || ''}`.trim();
+    renderizarJogosApiCopa();
+    msg('apiCopaMsg', `${jogosApiCopaCache.length} jogo(s) encontrados na ${jogosApiFonteAtual}.`);
+  } catch (err) {
+    msg('apiCopaMsg', err.message, 'error');
+  }
+}
+
+async function carregarJogosOpenLigaDB() {
+  try {
+    msg('apiCopaMsg', 'Buscando jogos na OpenLigaDB...', 'success');
+    const data = await request('/admin/openligadb/jogos');
+    jogosApiCopaCache = data.jogos || [];
+    jogosApiFonteAtual = `OpenLigaDB ${data.shortcut || ''} ${data.season || ''}`.trim();
+    renderizarJogosApiCopa();
+    msg('apiCopaMsg', `${jogosApiCopaCache.length} jogo(s) encontrados na ${jogosApiFonteAtual}.`);
+  } catch (err) {
+    msg('apiCopaMsg', err.message, 'error');
+  }
+}
+
+async function carregarJogosWikipedia2026() {
+  try {
+    msg('apiCopaMsg', 'Buscando jogos da Copa 2026 na Wikipedia...', 'success');
+    const data = await request('/admin/wikipedia2026/jogos');
+    jogosApiCopaCache = data.jogos || [];
+    jogosApiFonteAtual = 'Wikipedia 2026';
+    renderizarJogosApiCopa();
+    msg('apiCopaMsg', `${jogosApiCopaCache.length} jogo(s) encontrados na ${jogosApiFonteAtual}.`);
+  } catch (err) {
+    msg('apiCopaMsg', err.message, 'error');
+  }
+}
+
+async function importarJogoApiCopa(index) {
+  const jogo = filtrarJogosApi()[index];
+  if (!jogo) return;
+  try {
+    await request('/admin/api-football/jogos/importar', {
+      method: 'POST',
+      body: JSON.stringify(jogo),
+    });
+    msg('apiCopaMsg', 'Jogo importado. Agora você pode liberar as apostas quando quiser.');
+    await carregarTimesAdmin();
+    await carregarJogosAdmin();
+    renderizarJogosApiCopa();
+  } catch (err) {
+    msg('apiCopaMsg', err.message, 'error');
+  }
+}
+
 function formatarResultadoAdmin(j) {
   const placar = `${j.placar_casa ?? '-'} x ${j.placar_fora ?? '-'}`;
   const penaltis = j.penaltis_casa !== null && j.penaltis_casa !== undefined && j.penaltis_fora !== null && j.penaltis_fora !== undefined
     ? ` (${j.penaltis_casa} x ${j.penaltis_fora} pen.)`
     : '';
   return `${placar}${penaltis}`;
-}
-
-function grauLabel(grau) {
-  return {
-    comum: 'Comum',
-    raro: 'Raro',
-    epico: 'Épico',
-    lendario: 'Lendário',
-    mitico: 'Mítico',
-  }[grau] || grau;
 }
 
 function dinheiroAdmin(valor) {
@@ -419,62 +519,9 @@ async function carregarRelatoriosAdmin() {
   }
 }
 
-function efeitoNomeLabel(valor) {
-  return {
-    efeito_coracao_futebol: 'Coração do futebol',
-    efeito_o_oraculo: 'O Oráculo',
-    efeito_de_olho: 'De Olho',
-    efeito_verde_amarelo: 'Verde-Amarelo',
-    efeito_campeao_mundial: 'Campeão Mundial',
-    efeito_campeao: 'Coração do futebol',
-    efeito_oraculo: 'O Oráculo',
-    efeito_visao: 'De Olho',
-  }[valor] || valor;
-}
-
-function recompensasConquista(c) {
-  return [
-    c.titulo ? `Título: ${escapeHtml(c.titulo)}` : '',
-    c.emoji ? `Emoji: ${c.emoji}` : '',
-    c.moldura ? `Moldura: ${escapeHtml(c.moldura)}` : '',
-    c.aura ? `Aura: ${escapeHtml(c.aura)}` : '',
-    c.efeito_nome ? `Efeito: ${escapeHtml(efeitoNomeLabel(c.efeito_nome))}` : '',
-  ].filter(Boolean).join('<br>') || 'Sem recompensa visual';
-}
-
 function motivoReprovacaoHtml(aposta) {
   if (aposta.status_aposta !== 'reprovado' || !aposta.motivo_reprovacao) return '';
   return `<small class="text-muted">⚠️ ${escapeHtml(corrigirTextoMojibake(aposta.motivo_reprovacao))}</small>`;
-}
-
-async function carregarConquistasAdmin() {
-  try {
-    const rows = await request('/admin/conquistas');
-    const stat = document.getElementById('statConquistas');
-    if (stat) stat.textContent = `🏆 ${rows.length}`;
-    const tbody = document.getElementById('conquistasAdmin');
-    if (!tbody) return;
-    tbody.innerHTML = rows.map(c => `
-      <tr>
-        <td><strong>${escapeHtml(c.nome)}</strong><br><small>${escapeHtml(c.descricao)}</small></td>
-        <td><span class="badge achievement-${c.grau}">${grauLabel(c.grau)}</span></td>
-        <td>${recompensasConquista(c)}</td>
-        <td>${escapeHtml(c.tipo)}: ${escapeHtml(c.valor)}</td>
-      </tr>
-    `).join('');
-  } catch (err) {
-    msg('msgAdmin', err.message, 'error');
-  }
-}
-
-async function seedConquistasAdmin() {
-  try {
-    const data = await request('/admin/conquistas/seed', { method: 'POST' });
-    msg('msgAdmin', data.message);
-    carregarConquistasAdmin();
-  } catch (err) {
-    msg('msgAdmin', err.message, 'error');
-  }
 }
 
 async function carregarTimesAdmin() {
@@ -763,6 +810,7 @@ async function carregarJogosAdmin() {
           <button class="danger" onclick="excluirJogo(${j.id})">Excluir</button>
         </td>
       </tr>`).join('') || '<tr><td colspan="6">Nenhum jogo cadastrado.</td></tr>';
+    renderizarJogosApiCopa();
   } catch (err) {
     msg('msgAdmin', err.message, 'error');
   }
@@ -808,6 +856,8 @@ document.getElementById('btnCancelarEdicaoJogo')?.addEventListener('click', () =
   sairEdicaoJogo();
 });
 
+document.getElementById('buscaJogosApi')?.addEventListener('input', renderizarJogosApiCopa);
+
 async function liberarJogo(id, liberado) {
   try {
     await request(`/admin/jogos/${id}/liberar`, { method: 'PUT', body: JSON.stringify({ liberado }) });
@@ -836,7 +886,6 @@ async function resultadoJogo(e, id) {
       msg('msgAdmin', `Resultado salvo e ${data.message}`);
       await carregarApostasAdmin();
       await carregarJogosAdmin();
-      await carregarConquistasAdmin();
     } catch (calculoErr) {
       msg('msgAdmin', `Resultado salvo, mas ${calculoErr.message}`, 'warning');
       await carregarJogosAdmin();
@@ -875,13 +924,15 @@ carregarUsuarios();
 carregarTimesAdmin();
 carregarApostasAdmin();
 carregarJogosAdmin();
-carregarConquistasAdmin();
 mostrarTelaAdmin();
 
 window.addEventListener('hashchange', () => mostrarTelaAdmin());
 
-window.seedConquistasAdmin = seedConquistasAdmin;
 window.carregarRelatoriosAdmin = carregarRelatoriosAdmin;
+window.carregarJogosApiCopa = carregarJogosApiCopa;
+window.carregarJogosOpenLigaDB = carregarJogosOpenLigaDB;
+window.carregarJogosWikipedia2026 = carregarJogosWikipedia2026;
+window.importarJogoApiCopa = importarJogoApiCopa;
 window.gerarPdfRelatorio = gerarPdfRelatorio;
 window.copiarPix = copiarPix;
 window.atualizarAposta = atualizarAposta;
