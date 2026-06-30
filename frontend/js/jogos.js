@@ -23,6 +23,10 @@ function dinheiro(valor) {
   return `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`;
 }
 
+function placarJogo(jogo) {
+  return `${jogo.placar_casa ?? '-'} x ${jogo.placar_fora ?? '-'}`;
+}
+
 function formatarDataHoraJogo(valor) {
   if (!valor) return '-';
   const texto = String(valor);
@@ -46,7 +50,7 @@ function barraTermometro(rotulo, percentual, classe) {
 async function carregarJogos() {
   try {
     const jogos = await request('/jogos');
-    document.getElementById('listaJogos').innerHTML = jogos.map(j => {
+    document.getElementById('listaJogos').innerHTML = jogos.map((j) => {
       const aberto = Boolean(j.aberto_para_apostas);
       const bandeiraCasa = j.escudo_casa || obterUrlBandeira(j.time_casa);
       const bandeiraFora = j.escudo_fora || obterUrlBandeira(j.time_fora);
@@ -74,6 +78,8 @@ async function carregarJogos() {
           </div>
           <p>${statusBadge(j.status)} ${statusApostas}</p>
           <div class="match-stats">
+            <div><small>Placar atual</small><strong>${placarJogo(j)}</strong></div>
+            <div><small>Status do jogo</small><strong>${j.status}</strong></div>
             <div><small>Prêmio previsto</small><strong>${dinheiro(estatisticas.premio_previsto)}</strong></div>
             <div><small>Palpites no jogo</small><strong>${estatisticas.total_palpites || 0}</strong></div>
           </div>
@@ -94,4 +100,4 @@ async function carregarJogos() {
 }
 
 carregarJogos();
-setInterval(carregarJogos, 30000);
+setInterval(carregarJogos, 15000);

@@ -3227,3 +3227,95 @@ td {
     display: none;
   }
 }
+
+/* Game cards and multi-bet controls */
+.match-card {
+  color: #fffaf0 !important;
+  background:
+    linear-gradient(180deg, rgba(0, 42, 27, .96), rgba(0, 12, 8, .98)),
+    radial-gradient(circle at 16% 0%, rgba(255, 191, 27, .10), transparent 34%) !important;
+  border-color: rgba(255, 214, 95, .28) !important;
+}
+
+.match-card .match-stats div,
+.match-card .match-teams,
+.match-card .thermometer {
+  color: #fffaf0;
+  background: rgba(0, 10, 7, .58);
+  border-color: rgba(255, 214, 95, .18);
+}
+
+.match-card small,
+.match-card .match-head,
+.match-card .thermo-row {
+  color: #d8e8dd;
+}
+
+.match-card strong,
+.match-card .team-with-flag,
+.match-card .vs {
+  color: #ffffff;
+}
+
+.api-fixture-card,
+.api-fixture-imported {
+  color: #fffaf0;
+  background:
+    linear-gradient(180deg, rgba(0, 42, 27, .96), rgba(0, 12, 8, .98)),
+    radial-gradient(circle at 16% 0%, rgba(255, 191, 27, .10), transparent 34%);
+  border-color: rgba(255, 214, 95, .28);
+}
+
+.api-fixture-card small,
+.api-fixture-card .api-fixture-meta {
+  color: #d8e8dd;
+}
+
+.api-fixture-card strong,
+.api-fixture-card .api-fixture-teams > span {
+  color: #ffffff;
+}
+
+.api-fixture-card .api-fixture-teams > span {
+  background: rgba(255, 191, 27, .14);
+  border: 1px solid rgba(255, 214, 95, .20);
+}
+
+.multi-bet-list {
+  display: grid;
+  gap: 12px;
+}
+
+.multi-bet-row {
+  display: grid;
+  grid-template-columns: 48px 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid rgba(255, 214, 95, .16);
+  border-radius: 14px;
+  background: rgba(0, 18, 12, .62);
+}
+
+.multi-bet-index {
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+  color: var(--cup-gold-2);
+}
+
+.multi-bet-row .danger {
+  min-height: 48px;
+  padding-inline: 14px;
+}
+
+@media (max-width: 720px) {
+  .multi-bet-row {
+    grid-template-columns: 1fr;
+  }
+
+  .multi-bet-index {
+    min-height: auto;
+    place-items: start;
+  }
+}

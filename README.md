@@ -34,21 +34,16 @@ DB_USER=postgres
 DB_PASSWORD=sua_senha_db
 DB_NAME=bolao_copa
 USE_MEMORY_DB=false
-APISPORTS_KEY=sua_chave_api_football
-APISPORTS_BASE_URL=https://v3.football.api-sports.io
-APISPORTS_WORLD_CUP_LEAGUE_ID=1
-APISPORTS_WORLD_CUP_SEASON=2026
-OPENLIGADB_BASE_URL=https://api.openligadb.de
-OPENLIGADB_LEAGUE_SHORTCUT=wmk
-OPENLIGADB_SEASON=2022
-WIKIPEDIA_API_URL=https://en.wikipedia.org/w/api.php
+FIFA_BASE_URL=https://api.fifa.com/api/v3
+FIFA_WORLD_CUP_COMPETITION_ID=17
+FIFA_WORLD_CUP_SEASON_ID=285023
+FIFA_WORLD_CUP_FROM=2026-06-01
+FIFA_WORLD_CUP_TO=2026-07-31
 ```
 
-`APISPORTS_KEY` é usada apenas no backend. Não coloque essa chave em arquivos HTML ou JavaScript do frontend.
+A busca de jogos usa a API gratuita do site da FIFA no backend. Ela não exige chave e retorna jogos da Copa do Mundo 2026, horários, status e placar quando a FIFA disponibiliza esses dados.
 
-OpenLigaDB não exige chave, mas depende de a liga/temporada existir no serviço. Para Copa 2022, use `OPENLIGADB_LEAGUE_SHORTCUT=wmk` e `OPENLIGADB_SEASON=2022`.
-
-A fonte Wikipedia 2026 não exige chave e pode ser usada no admin pelo botão `Buscar Wikipedia 2026`.
+No painel administrativo, use `Buscar FIFA 2026`, importe os jogos desejados e libere as apostas manualmente.
 
 ## Criar banco PostgreSQL
 

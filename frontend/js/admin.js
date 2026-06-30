@@ -135,6 +135,7 @@ function renderizarJogosApiCopa() {
       <article class="api-fixture-card ${local ? 'api-fixture-imported' : ''}">
         <div class="api-fixture-status">
           <span class="badge">${escapeHtml(formatarFase(jogo.fase))}</span>
+          <span class="badge">${escapeHtml({ LIVE: 'Ao vivo', FT: 'Finalizado', NS: 'Aguardando' }[jogo.status] || jogo.status || 'Aguardando')}</span>
           <span class="status-badge ${local?.liberado_palpite ? 'pago' : 'pendente'}">${local ? (local.liberado_palpite ? 'Liberado' : 'Importado') : 'Na API'}</span>
         </div>
         <div class="api-fixture-teams">
@@ -159,36 +160,10 @@ function renderizarJogosApiCopa() {
 
 async function carregarJogosApiCopa() {
   try {
-    msg('apiCopaMsg', 'Buscando jogos na API-Football...', 'success');
-    const data = await request('/admin/api-football/jogos');
+    msg('apiCopaMsg', 'Buscando jogos da Copa 2026 na FIFA...', 'success');
+    const data = await request('/admin/fifa2026/jogos');
     jogosApiCopaCache = data.jogos || [];
-    jogosApiFonteAtual = `API-Football ${data.season || ''}`.trim();
-    renderizarJogosApiCopa();
-    msg('apiCopaMsg', `${jogosApiCopaCache.length} jogo(s) encontrados na ${jogosApiFonteAtual}.`);
-  } catch (err) {
-    msg('apiCopaMsg', err.message, 'error');
-  }
-}
-
-async function carregarJogosOpenLigaDB() {
-  try {
-    msg('apiCopaMsg', 'Buscando jogos na OpenLigaDB...', 'success');
-    const data = await request('/admin/openligadb/jogos');
-    jogosApiCopaCache = data.jogos || [];
-    jogosApiFonteAtual = `OpenLigaDB ${data.shortcut || ''} ${data.season || ''}`.trim();
-    renderizarJogosApiCopa();
-    msg('apiCopaMsg', `${jogosApiCopaCache.length} jogo(s) encontrados na ${jogosApiFonteAtual}.`);
-  } catch (err) {
-    msg('apiCopaMsg', err.message, 'error');
-  }
-}
-
-async function carregarJogosWikipedia2026() {
-  try {
-    msg('apiCopaMsg', 'Buscando jogos da Copa 2026 na Wikipedia...', 'success');
-    const data = await request('/admin/wikipedia2026/jogos');
-    jogosApiCopaCache = data.jogos || [];
-    jogosApiFonteAtual = 'Wikipedia 2026';
+    jogosApiFonteAtual = `FIFA ${data.season || ''}`.trim();
     renderizarJogosApiCopa();
     msg('apiCopaMsg', `${jogosApiCopaCache.length} jogo(s) encontrados na ${jogosApiFonteAtual}.`);
   } catch (err) {
@@ -200,7 +175,7 @@ async function importarJogoApiCopa(index) {
   const jogo = filtrarJogosApi()[index];
   if (!jogo) return;
   try {
-    await request('/admin/api-football/jogos/importar', {
+    await request('/admin/fifa2026/jogos/importar', {
       method: 'POST',
       body: JSON.stringify(jogo),
     });
@@ -930,8 +905,6 @@ window.addEventListener('hashchange', () => mostrarTelaAdmin());
 
 window.carregarRelatoriosAdmin = carregarRelatoriosAdmin;
 window.carregarJogosApiCopa = carregarJogosApiCopa;
-window.carregarJogosOpenLigaDB = carregarJogosOpenLigaDB;
-window.carregarJogosWikipedia2026 = carregarJogosWikipedia2026;
 window.importarJogoApiCopa = importarJogoApiCopa;
 window.gerarPdfRelatorio = gerarPdfRelatorio;
 window.copiarPix = copiarPix;

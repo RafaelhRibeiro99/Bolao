@@ -73,6 +73,7 @@ if (process.env.USE_MEMORY_DB === 'true') {
     taxa_admin: 0,
     jogo_validado: 0,
     is_final: 0,
+    api_jogo_id: null,
     criado_em: new Date(),
   }];
 
@@ -166,6 +167,10 @@ if (process.env.USE_MEMORY_DB === 'true') {
           const normalized = sql.replace(/\s+/g, ' ').trim();
 
           if (normalized.startsWith('ALTER TABLE palpites ADD COLUMN IF NOT EXISTS motivo_reprovacao')) {
+            return { affectedRows: 0 };
+          }
+
+          if (normalized.startsWith('ALTER TABLE jogos ADD COLUMN IF NOT EXISTS api_jogo_id')) {
             return { affectedRows: 0 };
           }
 
@@ -364,6 +369,7 @@ if (process.env.USE_MEMORY_DB === 'true') {
               codigo_fora: extendedInsert ? params[5] : null,
               bandeira_casa: extendedInsert ? params[6] : null,
               bandeira_fora: extendedInsert ? params[7] : null,
+              api_jogo_id: extendedInsert ? params[8] || null : null,
               placar_casa: null,
               placar_fora: null,
               penaltis_casa: null,
@@ -427,6 +433,19 @@ if (process.env.USE_MEMORY_DB === 'true') {
               jogo.penaltis_fora = params[3] === null || params[3] === undefined || params[3] === '' ? null : Number(params[3]);
               jogo.status = 'finalizado';
               jogo.liberado_palpite = 0;
+              jogo.jogo_validado = 0;
+            }
+            return { affectedRows: jogo ? 1 : 0 };
+          }
+
+          if (normalized.startsWith('UPDATE jogos SET api_jogo_id = ?, placar_casa = ?, placar_fora = ?, status = ?')) {
+            const jogo = jogos.find((j) => j.id === Number(params[5]));
+            if (jogo) {
+              jogo.api_jogo_id = params[0] || null;
+              jogo.placar_casa = params[1] === null || params[1] === undefined ? null : Number(params[1]);
+              jogo.placar_fora = params[2] === null || params[2] === undefined ? null : Number(params[2]);
+              jogo.status = params[3];
+              jogo.liberado_palpite = Number(params[4] || 0);
               jogo.jogo_validado = 0;
             }
             return { affectedRows: jogo ? 1 : 0 };

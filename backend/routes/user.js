@@ -1,11 +1,14 @@
-const express = require('express');
+﻿const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const pool = require('../config/db');
 const { auth } = require('../middleware/auth');
 const { codigoApostaPorSequencia } = require('../services/codigosAposta');
+const { sincronizarPlacarFifa } = require('../services/fifa');
 
 const router = express.Router();
+const VALOR_PALPITE = 5;
+const TAXA_PALPITE = 0.05;
 
 const AVATAR_FIELDS = ['avatar_face'];
 
@@ -98,7 +101,7 @@ function organizarRodadaPorOrigem(origem, jogos, slots) {
     resultado[slot] = {
       ...fallback,
       chaveamento_valido: false,
-      chaveamento_erro: 'Este jogo nÃ£o corresponde aos times que alimentam este slot.',
+      chaveamento_erro: 'Este jogo nÃƒÂ£o corresponde aos times que alimentam este slot.',
     };
   }
 
@@ -149,11 +152,9 @@ function dataJogoMs(dataJogo) {
 }
 
 function apostasEncerradas(jogo) {
-  if (Number(jogo?.liberado_palpite || 0) === 1 && ['aberto', 'fechado'].includes(jogo?.status)) {
-    return false;
-  }
   const limiteApostas = dataJogoMs(jogo.data_jogo) - (10 * 60 * 1000);
-  return Date.now() >= limiteApostas;
+  if (Date.now() >= limiteApostas) return true;
+  return !(Number(jogo?.liberado_palpite || 0) === 1 && ['aberto', 'fechado'].includes(jogo?.status));
 }
 
 function doisDigitos(valor) {
@@ -211,12 +212,15 @@ function estatisticasPalpitesJogo(palpites) {
   const empate = palpites.filter((p) => Number(p.palpite_casa) === Number(p.palpite_fora)).length;
   const fora = palpites.filter((p) => Number(p.palpite_casa) < Number(p.palpite_fora)).length;
   const percentual = (valor) => total ? Math.round((valor / total) * 100) : 0;
+  const valorApostado = total * VALOR_PALPITE;
+  const taxaPlataforma = valorApostado * TAXA_PALPITE;
 
   return {
     total_palpites: total,
-    valor_total_palpites: total * 5,
-    premio_previsto: total * 5,
-    taxa_plataforma: 0,
+    valor_total_palpites: valorApostado + taxaPlataforma,
+    valor_apostado: valorApostado,
+    premio_previsto: valorApostado,
+    taxa_plataforma: taxaPlataforma,
     termometro: {
       casa: percentual(casa),
       empate: percentual(empate),
@@ -256,7 +260,7 @@ router.get('/me', auth, async (req, res) => {
        FROM usuarios WHERE id = ?`,
       [req.user.id]
     );
-    if (!rows.length) return res.status(404).json({ message: 'UsuÃ¡rio nÃ£o encontrado.' });
+    if (!rows.length) return res.status(404).json({ message: 'UsuÃƒÂ¡rio nÃƒÂ£o encontrado.' });
 
     const usuario = rows[0];
 
@@ -273,7 +277,7 @@ router.get('/me', auth, async (req, res) => {
       ...avatarPayload(usuario),
     });
   } catch {
-    res.status(500).json({ message: 'Erro ao buscar usuÃ¡rio.' });
+    res.status(500).json({ message: 'Erro ao buscar usuÃƒÂ¡rio.' });
   } finally { if (conn) conn.release(); }
 });
 
@@ -285,7 +289,7 @@ router.put('/perfil', auth, async (req, res) => {
     avatar = null,
     avatar_face = AVATAR_DEFAULTS.avatar_face,
   } = req.body;
-  if (!nome_exibicao) return res.status(400).json({ message: 'Informe o nome de exibiÃ§Ã£o.' });
+  if (!nome_exibicao) return res.status(400).json({ message: 'Informe o nome de exibiÃƒÂ§ÃƒÂ£o.' });
 
   let conn;
   try {
@@ -321,7 +325,13 @@ router.get('/jogos/liberados', auth, async (_req, res) => {
       WHERE liberado_palpite = 1 AND status IN ('aberto','fechado')
       ORDER BY data_jogo ASC
     `);
-    const enriquecidos = await Promise.all(jogos.map((jogo) => enriquecerJogo(conn, jogo)));
+    await sincronizarPlacarFifa(conn, jogos);
+    const jogosAtualizados = await conn.query(`
+      SELECT * FROM jogos
+      WHERE liberado_palpite = 1 AND status IN ('aberto','fechado')
+      ORDER BY data_jogo ASC
+    `);
+    const enriquecidos = await Promise.all(jogosAtualizados.map((jogo) => enriquecerJogo(conn, jogo)));
     res.json(enriquecidos.filter((jogo) => jogo.aberto_para_apostas));
   } catch {
     res.status(500).json({ message: 'Erro ao buscar jogos.' });
@@ -333,7 +343,9 @@ router.get('/jogos', auth, async (_req, res) => {
   try {
     conn = await pool.getConnection();
     const jogos = await conn.query('SELECT * FROM jogos ORDER BY data_jogo ASC');
-    res.json(await Promise.all(jogos.map((jogo) => enriquecerJogo(conn, jogo))));
+    await sincronizarPlacarFifa(conn, jogos);
+    const jogosAtualizados = await conn.query('SELECT * FROM jogos ORDER BY data_jogo ASC');
+    res.json(await Promise.all(jogosAtualizados.map((jogo) => enriquecerJogo(conn, jogo))));
   } catch {
     res.status(500).json({ message: 'Erro ao buscar jogos.' });
   } finally { if (conn) conn.release(); }
@@ -370,7 +382,7 @@ router.get('/premios', auth, async (_req, res) => {
     conn = await pool.getConnection();
     res.json(await premiosAcumulados(conn));
   } catch {
-    res.status(500).json({ message: 'Erro ao buscar prÃªmios acumulados.' });
+    res.status(500).json({ message: 'Erro ao buscar prÃƒÂªmios acumulados.' });
   } finally { if (conn) conn.release(); }
 });
 
@@ -379,35 +391,73 @@ router.get('/jogos/:id', auth, async (req, res) => {
   try {
     conn = await pool.getConnection();
     const jogos = await conn.query('SELECT * FROM jogos WHERE id = ?', [req.params.id]);
-    if (!jogos.length) return res.status(404).json({ message: 'Jogo nÃ£o encontrado.' });
-    res.json(await enriquecerJogo(conn, jogos[0]));
+    if (!jogos.length) return res.status(404).json({ message: 'Jogo nÃƒÂ£o encontrado.' });
+    await sincronizarPlacarFifa(conn, jogos);
+    const jogosAtualizados = await conn.query('SELECT * FROM jogos WHERE id = ?', [req.params.id]);
+    res.json(await enriquecerJogo(conn, jogosAtualizados[0] || jogos[0]));
   } catch {
     res.status(500).json({ message: 'Erro ao buscar jogo.' });
   } finally { if (conn) conn.release(); }
 });
 
 router.post('/palpites', auth, async (req, res) => {
-  const { jogo_id, palpite_casa, palpite_fora } = req.body;
+  const { jogo_id } = req.body;
+  const palpitesRecebidos = Array.isArray(req.body.palpites)
+    ? req.body.palpites
+    : [{ palpite_casa: req.body.palpite_casa, palpite_fora: req.body.palpite_fora }];
+  const palpitesValidos = palpitesRecebidos.map((palpite) => {
+    if (palpite.palpite_casa === '' || palpite.palpite_fora === '') return null;
+    return {
+      palpite_casa: Number(palpite.palpite_casa),
+      palpite_fora: Number(palpite.palpite_fora),
+    };
+  }).filter((palpite) => (
+    palpite
+    && Number.isInteger(palpite.palpite_casa)
+    && Number.isInteger(palpite.palpite_fora)
+    && palpite.palpite_casa >= 0
+    && palpite.palpite_fora >= 0
+  ));
+
+  if (!palpitesValidos.length) {
+    return res.status(400).json({ message: 'Informe pelo menos um palpite vÃ¡lido.' });
+  }
   let conn;
   try {
     conn = await pool.getConnection();
     const jogos = await conn.query('SELECT * FROM jogos WHERE id = ? AND liberado_palpite = 1', [jogo_id]);
-    if (!jogos.length) return res.status(404).json({ message: 'Jogo nÃ£o liberado.' });
+    if (!jogos.length) return res.status(404).json({ message: 'Jogo nÃƒÂ£o liberado.' });
 
     const jogo = jogos[0];
     if (apostasEncerradas(jogo)) {
-      return res.status(400).json({ message: 'Apostas encerradas. O limite Ã© de 10 minutos antes do inÃ­cio do jogo.' });
+      return res.status(400).json({ message: 'Apostas encerradas. O limite ÃƒÂ© de 10 minutos antes do inÃƒÂ­cio do jogo.' });
     }
 
-    const result = await conn.query(`
-      INSERT INTO palpites (usuario_id, jogo_id, palpite_casa, palpite_fora, status_aposta)
-      VALUES (?, ?, ?, ?, "pendente")
-    `, [req.user.id, jogo_id, palpite_casa, palpite_fora]);
-    const palpiteId = Number(result.insertId || result.id || 0);
-    const codigo = codigoApostaPorSequencia(palpiteId || Date.now());
-    await conn.query('UPDATE palpites SET codigo_aposta = ? WHERE id = ?', [codigo, palpiteId]);
+    const codigos = [];
+    for (const palpite of palpitesValidos) {
+      const result = await conn.query(`
+        INSERT INTO palpites (usuario_id, jogo_id, palpite_casa, palpite_fora, status_aposta)
+        VALUES (?, ?, ?, ?, "pendente")
+      `, [req.user.id, jogo_id, palpite.palpite_casa, palpite.palpite_fora]);
+      const palpiteId = Number(result.insertId || result.id || 0);
+      const codigo = codigoApostaPorSequencia(palpiteId || Date.now());
+      await conn.query('UPDATE palpites SET codigo_aposta = ? WHERE id = ?', [codigo, palpiteId]);
+      codigos.push(codigo);
+    }
 
-    res.json({ message: `Aposta ${codigo} salva com status pendente. Aguarde a aprovaÃ§Ã£o do administrador.`, codigo_aposta: codigo });
+    const quantidade = codigos.length;
+    const valorApostado = quantidade * VALOR_PALPITE;
+    const taxa = valorApostado * TAXA_PALPITE;
+    const valorTotal = valorApostado + taxa;
+    res.json({
+      message: `${quantidade} palpite(s) salvo(s) com status pendente. Aguarde a aprovação do administrador.`,
+      codigo_aposta: codigos[0],
+      codigos_aposta: codigos,
+      quantidade,
+      valor_apostado: valorApostado,
+      taxa,
+      valor_total: valorTotal,
+    });
   } catch {
     res.status(500).json({ message: 'Erro ao salvar palpite.' });
   } finally { if (conn) conn.release(); }
@@ -432,7 +482,7 @@ router.get('/transparencia', auth, async (req, res) => {
       `, [jogo.id]);
       const palpitesAprovados = palpites.filter((palpite) => palpite.status_aposta === 'aprovado');
       const vencedores = palpitesAprovados.filter((palpite) => palpiteVencedor(jogo, palpite));
-      const premioBase = palpitesAprovados.length * 5;
+      const premioBase = palpitesAprovados.length * VALOR_PALPITE;
       const premioTotal = Number(jogo.jogo_validado || 0) === 1 && vencedores.length
         ? premioBase + (jogo.fase === 'final' ? Number(jogo.premio_acumulado || 0) : 0)
         : 0;
@@ -470,7 +520,7 @@ router.get('/transparencia', auth, async (req, res) => {
 
     res.json({ jogos: resultado, admin: req.user.tipo === 'admin' });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao buscar transparÃªncia.' });
+    res.status(500).json({ message: 'Erro ao buscar transparÃƒÂªncia.' });
   } finally { if (conn) conn.release(); }
 });
 
@@ -494,7 +544,7 @@ router.get('/meus-palpites', auth, async (req, res) => {
       const jogoRef = rows.find((palpite) => Number(palpite.jogo_id) === jogoId);
       const aprovados = await conn.query('SELECT * FROM palpites WHERE jogo_id = ? AND status_aposta = "aprovado"', [jogoId]);
       const vencedores = aprovados.filter((palpite) => palpiteVencedor(jogoRef, palpite));
-      const premioBase = aprovados.length * 5;
+      const premioBase = aprovados.length * VALOR_PALPITE;
       const premioTotal = Number(jogoRef?.jogo_validado || 0) === 1 && vencedores.length
         ? premioBase + (jogoRef?.fase === 'final' ? Number(jogoRef?.premio_acumulado || 0) : 0)
         : 0;
