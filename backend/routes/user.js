@@ -152,9 +152,17 @@ function dataJogoMs(dataJogo) {
 }
 
 function apostasEncerradas(jogo) {
+  const jogoFifa = Boolean(jogo?.api_jogo_id);
+  const liberado = Number(jogo?.liberado_palpite || 0) === 1;
+  const statusPermiteAposta = ['aberto', 'fechado'].includes(jogo?.status);
+
+  if (jogoFifa) {
+    return !(liberado && statusPermiteAposta);
+  }
+
   const limiteApostas = dataJogoMs(jogo.data_jogo) - (10 * 60 * 1000);
   if (Date.now() >= limiteApostas) return true;
-  return !(Number(jogo?.liberado_palpite || 0) === 1 && ['aberto', 'fechado'].includes(jogo?.status));
+  return !(liberado && statusPermiteAposta);
 }
 
 function doisDigitos(valor) {
