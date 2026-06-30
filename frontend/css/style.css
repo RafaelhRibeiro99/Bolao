@@ -1710,6 +1710,22 @@ small { color: var(--muted); }
   min-width: 0;
 }
 
+.fifa-auto-result {
+  display: inline-grid;
+  gap: 4px;
+  min-width: 180px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 214, 95, .18);
+  border-radius: 12px;
+  background: rgba(0, 18, 12, .62);
+  vertical-align: middle;
+}
+
+.fifa-auto-result small {
+  color: var(--cup-muted);
+  font-size: 12px;
+}
+
 .api-fixture-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

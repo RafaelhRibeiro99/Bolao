@@ -503,8 +503,11 @@ router.get('/jogos', async (_req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
+    await garantirApiJogoId(conn);
     const rows = await conn.query('SELECT * FROM jogos ORDER BY data_jogo ASC');
-    res.json(rows);
+    await fifaService.sincronizarPlacarFifa(conn, rows);
+    const atualizados = await conn.query('SELECT * FROM jogos ORDER BY data_jogo ASC');
+    res.json(atualizados);
   } catch {
     res.status(500).json({ message: 'Erro ao listar jogos.' });
   } finally { if (conn) conn.release(); }
@@ -557,6 +560,15 @@ router.post('/fifa2026/jogos/importar', async (req, res) => {
       && String(item.data_jogo).slice(0, 16) === jogo.data_jogo.slice(0, 16)
     ));
     if (jaExiste) {
+      if (!jaExiste.api_jogo_id && jogo.fixture_id) {
+        await conn.query(
+          `UPDATE jogos
+           SET api_jogo_id = ?, codigo_casa = ?, codigo_fora = ?, bandeira_casa = ?, bandeira_fora = ?
+           WHERE id = ?`,
+          [jogo.fixture_id, jogo.codigo_casa, jogo.codigo_fora, jogo.bandeira_casa, jogo.bandeira_fora, jaExiste.id]
+        );
+        jaExiste.api_jogo_id = jogo.fixture_id;
+      }
       return res.json({ message: 'Este jogo já estava cadastrado.', jogo: serializarJogoData(jaExiste), existente: true });
     }
 
@@ -694,6 +706,12 @@ router.put('/jogos/:id/resultado', async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
+    await garantirApiJogoId(conn);
+    const jogos = await conn.query('SELECT id, api_jogo_id FROM jogos WHERE id = ?', [req.params.id]);
+    if (!jogos.length) return res.status(404).json({ message: 'Jogo não encontrado.' });
+    if (jogos[0].api_jogo_id) {
+      return res.status(400).json({ message: 'Este jogo veio da FIFA. O resultado é atualizado automaticamente pela API FIFA.' });
+    }
     const result = await conn.query(
       'UPDATE jogos SET placar_casa = ?, placar_fora = ?, penaltis_casa = ?, penaltis_fora = ?, status = "finalizado", liberado_palpite = 0, jogo_validado = 0 WHERE id = ?',
       [placar_casa, placar_fora, penaltis_casa, penaltis_fora, req.params.id]

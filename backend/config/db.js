@@ -346,6 +346,12 @@ if (process.env.USE_MEMORY_DB === 'true') {
             return jogos.filter((j) => j.id === Number(params[0]));
           }
 
+          if (normalized.startsWith('SELECT id, api_jogo_id FROM jogos WHERE id = ?')) {
+            return jogos
+              .filter((j) => j.id === Number(params[0]))
+              .map((j) => ({ id: j.id, api_jogo_id: j.api_jogo_id || null }));
+          }
+
           if (normalized.startsWith('SELECT * FROM jogos ORDER BY data_jogo ASC')) {
             return [...jogos].sort(byDate);
           }
@@ -447,6 +453,18 @@ if (process.env.USE_MEMORY_DB === 'true') {
               jogo.status = params[3];
               jogo.liberado_palpite = Number(params[4] || 0);
               jogo.jogo_validado = 0;
+            }
+            return { affectedRows: jogo ? 1 : 0 };
+          }
+
+          if (normalized.startsWith('UPDATE jogos SET api_jogo_id = ?, codigo_casa = ?, codigo_fora = ?, bandeira_casa = ?, bandeira_fora = ?')) {
+            const jogo = jogos.find((j) => j.id === Number(params[5]));
+            if (jogo) {
+              jogo.api_jogo_id = params[0] || null;
+              jogo.codigo_casa = params[1] || null;
+              jogo.codigo_fora = params[2] || null;
+              jogo.bandeira_casa = params[3] || null;
+              jogo.bandeira_fora = params[4] || null;
             }
             return { affectedRows: jogo ? 1 : 0 };
           }

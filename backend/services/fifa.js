@@ -163,8 +163,8 @@ async function garantirApiJogoId(conn) {
 
 async function sincronizarPlacarFifa(conn, jogosLocais) {
   const locais = Array.isArray(jogosLocais) ? jogosLocais : [];
-  const sincronizaveis = locais.filter((jogo) => jogo.api_jogo_id || jogo.fonte === 'FIFA 2026');
-  if (!sincronizaveis.length && !locais.length) return;
+  const sincronizaveis = locais.filter((jogo) => jogo.api_jogo_id);
+  if (!sincronizaveis.length) return;
   await garantirApiJogoId(conn);
 
   let jogosFifa;
@@ -175,7 +175,7 @@ async function sincronizarPlacarFifa(conn, jogosLocais) {
     return;
   }
 
-  for (const local of locais) {
+  for (const local of sincronizaveis) {
     const fifa = jogosFifa.find((jogo) => mesmaPartida(local, jogo));
     if (!fifa) continue;
 

@@ -196,6 +196,31 @@ function formatarResultadoAdmin(j) {
   return `${placar}${penaltis}`;
 }
 
+function jogoFifaAdmin(jogo) {
+  return Boolean(jogo?.api_jogo_id);
+}
+
+function controlesResultadoAdmin(jogo) {
+  if (jogoFifaAdmin(jogo)) {
+    return `
+      <div class="fifa-auto-result">
+        <span class="badge">FIFA automático</span>
+        <small>Placar e status atualizados pela API FIFA.</small>
+      </div>
+    `;
+  }
+
+  return `
+    <form class="inline-form result-form" onsubmit="resultadoJogo(event, ${jogo.id})">
+      <input type="number" min="0" name="casa" placeholder="Casa" required title="Placar casa">
+      <input type="number" min="0" name="fora" placeholder="Fora" required title="Placar fora">
+      <input type="number" min="0" name="penaltis_casa" placeholder="Pen. C" title="Pênaltis casa">
+      <input type="number" min="0" name="penaltis_fora" placeholder="Pen. F" title="Pênaltis fora">
+      <button class="primary">Resultado</button>
+    </form>
+  `;
+}
+
 function dinheiroAdmin(valor) {
   return `R$ ${Number(valor || 0).toFixed(2).replace('.', ',')}`;
 }
@@ -775,13 +800,7 @@ async function carregarJogosAdmin() {
           <button class="secondary" onclick="editarJogo(${j.id})">Editar</button>
           <button class="secondary" onclick="liberarJogo(${j.id}, true)">Liberar</button>
           <button class="danger" onclick="liberarJogo(${j.id}, false)">Bloquear</button>
-          <form class="inline-form result-form" onsubmit="resultadoJogo(event, ${j.id})">
-            <input type="number" min="0" name="casa" placeholder="Casa" required title="Placar casa">
-            <input type="number" min="0" name="fora" placeholder="Fora" required title="Placar fora">
-            <input type="number" min="0" name="penaltis_casa" placeholder="Pen. C" title="Pênaltis casa">
-            <input type="number" min="0" name="penaltis_fora" placeholder="Pen. F" title="Pênaltis fora">
-            <button class="primary">Resultado</button>
-          </form>
+          ${controlesResultadoAdmin(j)}
           <button class="danger" onclick="excluirJogo(${j.id})">Excluir</button>
         </td>
       </tr>`).join('') || '<tr><td colspan="6">Nenhum jogo cadastrado.</td></tr>';
@@ -900,6 +919,10 @@ carregarTimesAdmin();
 carregarApostasAdmin();
 carregarJogosAdmin();
 mostrarTelaAdmin();
+
+setInterval(() => {
+  if (telaAtualAdmin() === 'jogos') carregarJogosAdmin();
+}, 15000);
 
 window.addEventListener('hashchange', () => mostrarTelaAdmin());
 
