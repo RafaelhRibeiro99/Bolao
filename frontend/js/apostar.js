@@ -86,14 +86,14 @@ function abrirPixModal(data) {
   const quantidade = data.quantidade || codigos.length || 1;
   const valorApostado = data.valor_apostado ?? quantidade * VALOR_PALPITE;
   const taxa = data.taxa ?? valorApostado * TAXA_PALPITE;
-  const total = data.valor_total ?? valorApostado + taxa;
+  const total = data.valor_total ?? valorApostado;
 
   document.getElementById('pixApostaCodigo').textContent = codigos.length
     ? `Códigos dos palpites: ${codigos.join(', ')}`
     : 'Palpite salvo com status pendente.';
   document.getElementById('pixChavePagamento').textContent = pixPagamento;
   document.getElementById('pixValorBase').textContent = `${quantidade} x ${dinheiro(VALOR_PALPITE)} = ${dinheiro(valorApostado)}`;
-  document.getElementById('pixTaxaPagamento').textContent = `5% = ${dinheiro(taxa)}`;
+  document.getElementById('pixTaxaPagamento').textContent = `5% retidos internamente = ${dinheiro(taxa)}`;
   document.getElementById('pixValorTotal').textContent = dinheiro(total);
   modal.classList.remove('hidden');
 }
@@ -126,7 +126,7 @@ async function carregarJogo() {
         <div><small>Status</small><strong>${jogoAtual.status}</strong></div>
       </div>
       <p class="text-muted">Data: ${formatarDataHoraJogo(jogoAtual.data_jogo)}</p>
-      <p><span class="badge">Valor: ${dinheiro(VALOR_PALPITE)} + 5%</span> <span class="${jogoAtual.aberto_para_apostas ? 'badge' : 'status-badge pendente'}">${jogoAtual.aberto_para_apostas ? 'Apostas liberadas' : 'Apostas encerradas'}</span></p>
+      <p><span class="badge">Valor: ${dinheiro(VALOR_PALPITE)}</span> <span class="${jogoAtual.aberto_para_apostas ? 'badge' : 'status-badge pendente'}">${jogoAtual.aberto_para_apostas ? 'Apostas liberadas' : 'Apostas encerradas'}</span></p>
       <p class="text-muted">Limite: 10 minutos antes do jogo</p>
     `;
     atualizarNomesTimesPalpites();

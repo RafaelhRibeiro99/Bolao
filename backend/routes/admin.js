@@ -257,8 +257,8 @@ function calcularResumoFinanceiroJogo(jogo, palpites) {
     : [];
   const valorApostado = aprovadas.length * 5;
   const taxaPlataforma = valorApostado * 0.05;
-  const arrecadado = valorApostado + taxaPlataforma;
-  const premioBase = valorApostado;
+  const arrecadado = valorApostado;
+  const premioBase = valorApostado - taxaPlataforma;
   const premioTotal = vencedores.length
     ? premioBase + (jogo.fase === 'final' ? Number(jogo.premio_acumulado || 0) : 0)
     : 0;
@@ -749,13 +749,13 @@ router.post('/jogos/:id/calcular', async (req, res) => {
     const totalApostas = palpites.length;
     const valorApostado = totalApostas * 5;
     const taxaPlataforma = valorApostado * 0.05;
-    const arrecadado = valorApostado + taxaPlataforma;
-    const premioBase = valorApostado;
+    const arrecadado = valorApostado;
+    const premioBase = valorApostado - taxaPlataforma;
     const premioAcumuladoFinal = Number(jogo.premio_acumulado || 0);
     const baseFinalSemVencedor = premioAcumuladoFinal + arrecadado;
     const acumuloFinal = semVencedor && !isFinal ? premioBase : 0;
     const acumuloRanking = 0;
-    const valorPlataformaFinal = 0;
+    const valorPlataformaFinal = taxaPlataforma;
 
     if (semVencedor && !isFinal) {
       await conn.query(
@@ -770,7 +770,7 @@ router.post('/jogos/:id/calcular', async (req, res) => {
 
     await conn.query('UPDATE jogos SET jogo_validado = 1 WHERE id = ?', [req.params.id]);
 
-    const taxa = semVencedor ? acumuloRanking : taxaPlataforma;
+    const taxa = taxaPlataforma;
     const premiacao = semVencedor ? acumuloFinal : premioBase + (isFinal ? premioAcumuladoFinal : 0);
     let message;
     if (semVencedor && !isFinal) {

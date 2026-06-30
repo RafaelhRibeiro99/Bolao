@@ -222,12 +222,13 @@ function estatisticasPalpitesJogo(palpites) {
   const percentual = (valor) => total ? Math.round((valor / total) * 100) : 0;
   const valorApostado = total * VALOR_PALPITE;
   const taxaPlataforma = valorApostado * TAXA_PALPITE;
+  const premioPrevisto = valorApostado - taxaPlataforma;
 
   return {
     total_palpites: total,
-    valor_total_palpites: valorApostado + taxaPlataforma,
+    valor_total_palpites: valorApostado,
     valor_apostado: valorApostado,
-    premio_previsto: valorApostado,
+    premio_previsto: premioPrevisto,
     taxa_plataforma: taxaPlataforma,
     termometro: {
       casa: percentual(casa),
@@ -456,7 +457,7 @@ router.post('/palpites', auth, async (req, res) => {
     const quantidade = codigos.length;
     const valorApostado = quantidade * VALOR_PALPITE;
     const taxa = valorApostado * TAXA_PALPITE;
-    const valorTotal = valorApostado + taxa;
+    const premio = valorApostado - taxa;
     res.json({
       message: `${quantidade} palpite(s) salvo(s) com status pendente. Aguarde a aprovação do administrador.`,
       codigo_aposta: codigos[0],
@@ -464,7 +465,8 @@ router.post('/palpites', auth, async (req, res) => {
       quantidade,
       valor_apostado: valorApostado,
       taxa,
-      valor_total: valorTotal,
+      premio_previsto: premio,
+      valor_total: valorApostado,
     });
   } catch {
     res.status(500).json({ message: 'Erro ao salvar palpite.' });
@@ -490,7 +492,8 @@ router.get('/transparencia', auth, async (req, res) => {
       `, [jogo.id]);
       const palpitesAprovados = palpites.filter((palpite) => palpite.status_aposta === 'aprovado');
       const vencedores = palpitesAprovados.filter((palpite) => palpiteVencedor(jogo, palpite));
-      const premioBase = palpitesAprovados.length * VALOR_PALPITE;
+      const valorApostado = palpitesAprovados.length * VALOR_PALPITE;
+      const premioBase = valorApostado - (valorApostado * TAXA_PALPITE);
       const premioTotal = Number(jogo.jogo_validado || 0) === 1 && vencedores.length
         ? premioBase + (jogo.fase === 'final' ? Number(jogo.premio_acumulado || 0) : 0)
         : 0;
@@ -552,7 +555,8 @@ router.get('/meus-palpites', auth, async (req, res) => {
       const jogoRef = rows.find((palpite) => Number(palpite.jogo_id) === jogoId);
       const aprovados = await conn.query('SELECT * FROM palpites WHERE jogo_id = ? AND status_aposta = "aprovado"', [jogoId]);
       const vencedores = aprovados.filter((palpite) => palpiteVencedor(jogoRef, palpite));
-      const premioBase = aprovados.length * VALOR_PALPITE;
+      const valorApostado = aprovados.length * VALOR_PALPITE;
+      const premioBase = valorApostado - (valorApostado * TAXA_PALPITE);
       const premioTotal = Number(jogoRef?.jogo_validado || 0) === 1 && vencedores.length
         ? premioBase + (jogoRef?.fase === 'final' ? Number(jogoRef?.premio_acumulado || 0) : 0)
         : 0;
