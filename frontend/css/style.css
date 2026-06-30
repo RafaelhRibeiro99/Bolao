@@ -3063,7 +3063,7 @@ td {
   width: min(620px, calc(100% - 20px));
   min-height: 66px;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 4px;
   padding: 7px;
   border-radius: 20px;

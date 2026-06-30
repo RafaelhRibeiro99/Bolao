@@ -120,7 +120,6 @@ function prepararInterfaceApp() {
   const items = [
     { href: '/dashboard.html', icon: '⌂', label: 'Início', active: ['/dashboard.html'] },
     { href: '/jogos.html', icon: '▦', label: 'Jogos', active: ['/jogos.html'] },
-    { href: '/jogos.html', icon: '◎', label: 'Apostar', active: ['/apostar.html'] },
     { href: '/chaveamento.html', icon: '⌘', label: 'Chaveamento', active: ['/chaveamento.html'] },
     { href: '/perfil.html', icon: '◔', label: 'Perfil', active: ['/perfil.html'] },
     { href: '/regras.html', icon: '§', label: 'Regras', active: ['/regras.html'] },
