@@ -484,6 +484,56 @@ function htmlPdfRelatorio(data, tipo) {
   `;
 }
 
+function totalGeralRelatorio(jogos) {
+  return jogos.reduce((acc, jogo) => ({
+    total_apostas: acc.total_apostas + Number(jogo.financeiro?.total_apostas || 0),
+    total_aprovadas: acc.total_aprovadas + Number(jogo.financeiro?.total_aprovadas || 0),
+    total_pendentes: acc.total_pendentes + Number(jogo.financeiro?.total_pendentes || 0),
+    total_reprovadas: acc.total_reprovadas + Number(jogo.financeiro?.total_reprovadas || 0),
+    arrecadado: acc.arrecadado + Number(jogo.financeiro?.arrecadado || 0),
+    valor_a_pagar: acc.valor_a_pagar + Number(jogo.financeiro?.valor_a_pagar || 0),
+    plataforma: acc.plataforma + Number(jogo.financeiro?.plataforma || 0),
+  }), {
+    total_apostas: 0,
+    total_aprovadas: 0,
+    total_pendentes: 0,
+    total_reprovadas: 0,
+    arrecadado: 0,
+    valor_a_pagar: 0,
+    plataforma: 0,
+  });
+}
+
+function relatorioFiltradoAdmin(data = relatoriosAdminCache) {
+  const jogoId = document.getElementById('filtroRelatorioJogo')?.value || '';
+  const jogos = jogoId
+    ? (data?.jogos || []).filter((jogo) => Number(jogo.id) === Number(jogoId))
+    : (data?.jogos || []);
+  return {
+    ...data,
+    jogos,
+    total_geral: jogoId ? totalGeralRelatorio(jogos) : (data?.total_geral || totalGeralRelatorio(jogos)),
+  };
+}
+
+function preencherFiltroRelatorioJogos(jogos) {
+  const filtro = document.getElementById('filtroRelatorioJogo');
+  if (!filtro) return;
+  const selecionado = filtro.value;
+  filtro.innerHTML = '<option value="">Todos os jogos</option>'
+    + (jogos || []).map((jogo) => `<option value="${jogo.id}">${nomeJogoAdmin(jogo)}</option>`).join('');
+  if ([...filtro.options].some((option) => option.value === selecionado)) {
+    filtro.value = selecionado;
+  }
+}
+
+function renderizarRelatoriosAdmin(data = relatorioFiltradoAdmin()) {
+  const jogos = data.jogos || [];
+  document.getElementById('relatorioGanhadores').innerHTML = jogos.map(tabelaGanhadoresRelatorio).join('') || '<p class="text-muted">Nenhum jogo encontrado para o filtro.</p>';
+  document.getElementById('relatorioApostas').innerHTML = jogos.map(tabelaApostasRelatorio).join('') || '<p class="text-muted">Nenhum jogo encontrado para o filtro.</p>';
+  document.getElementById('relatorioFinanceiro').innerHTML = tabelaFinanceiroRelatorio(data);
+}
+
 async function obterRelatoriosAdmin() {
   if (relatoriosAdminCache) return relatoriosAdminCache;
   relatoriosAdminCache = await request('/admin/relatorios');
@@ -492,7 +542,8 @@ async function obterRelatoriosAdmin() {
 
 async function gerarPdfRelatorio(tipo) {
   try {
-    const data = await obterRelatoriosAdmin();
+    await obterRelatoriosAdmin();
+    const data = relatorioFiltradoAdmin();
     const janela = window.open('', '_blank');
     if (!janela) {
       msg('relatoriosAdminMsg', 'Permita popups para gerar o PDF.', 'error');
@@ -510,14 +561,16 @@ async function carregarRelatoriosAdmin() {
   try {
     const data = await request('/admin/relatorios');
     relatoriosAdminCache = data;
-    const jogos = data.jogos || [];
-    document.getElementById('relatorioGanhadores').innerHTML = jogos.map(tabelaGanhadoresRelatorio).join('') || '<p class="text-muted">Nenhum jogo cadastrado.</p>';
-    document.getElementById('relatorioApostas').innerHTML = jogos.map(tabelaApostasRelatorio).join('') || '<p class="text-muted">Nenhum jogo cadastrado.</p>';
-    document.getElementById('relatorioFinanceiro').innerHTML = tabelaFinanceiroRelatorio(data);
+    preencherFiltroRelatorioJogos(data.jogos || []);
+    renderizarRelatoriosAdmin(relatorioFiltradoAdmin(data));
   } catch (err) {
     msg('relatoriosAdminMsg', err.message, 'error');
   }
 }
+
+document.getElementById('filtroRelatorioJogo')?.addEventListener('change', () => {
+  if (relatoriosAdminCache) renderizarRelatoriosAdmin(relatorioFiltradoAdmin());
+});
 
 function motivoReprovacaoHtml(aposta) {
   if (aposta.status_aposta !== 'reprovado' || !aposta.motivo_reprovacao) return '';
@@ -921,7 +974,7 @@ carregarJogosAdmin();
 mostrarTelaAdmin();
 
 setInterval(() => {
-  if (telaAtualAdmin() === 'jogos') carregarJogosAdmin();
+  if (telaAdminAtual() === 'jogos') carregarJogosAdmin();
 }, 15000);
 
 window.addEventListener('hashchange', () => mostrarTelaAdmin());

@@ -136,7 +136,12 @@
     <section id="relatoriosBox" class="admin-screen" data-admin-screen="relatorios">
       <div class="section-title">
         <h2>&#128202; Relat&oacute;rios</h2>
-        <button class="primary" type="button" onclick="carregarRelatoriosAdmin()">Atualizar relat&oacute;rios</button>
+        <div class="actions">
+          <select id="filtroRelatorioJogo" aria-label="Filtrar relat&oacute;rios por jogo">
+            <option value="">Todos os jogos</option>
+          </select>
+          <button class="primary" type="button" onclick="carregarRelatoriosAdmin()">Atualizar relat&oacute;rios</button>
+        </div>
       </div>
       <div id="relatoriosAdminMsg"></div>
       <section class="data-section">

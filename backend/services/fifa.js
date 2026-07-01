@@ -3,6 +3,7 @@ const FIFA_WORLD_CUP_COMPETITION_ID = process.env.FIFA_WORLD_CUP_COMPETITION_ID 
 const FIFA_WORLD_CUP_SEASON_ID = process.env.FIFA_WORLD_CUP_SEASON_ID || '285023';
 const FIFA_WORLD_CUP_FROM = process.env.FIFA_WORLD_CUP_FROM || '2026-06-01';
 const FIFA_WORLD_CUP_TO = process.env.FIFA_WORLD_CUP_TO || '2026-07-31';
+const { calcularPontos } = require('./pontuacao');
 
 const CACHE_MS = 10000;
 let cacheFifa = { expiresAt: 0, jogos: [] };
@@ -161,6 +162,40 @@ async function garantirApiJogoId(conn) {
   }
 }
 
+async function apurarJogoFinalizado(conn, jogoId) {
+  const jogos = await conn.query('SELECT * FROM jogos WHERE id = ? AND status = "finalizado"', [jogoId]);
+  if (!jogos.length) return;
+
+  const jogo = jogos[0];
+  const palpites = await conn.query('SELECT * FROM palpites WHERE jogo_id = ? AND status_aposta = "aprovado"', [jogoId]);
+  if (palpites.length < 2) return;
+
+  const pontos = [];
+  for (const palpite of palpites) {
+    const pontuacao = calcularPontos(jogo, palpite);
+    pontos.push(pontuacao);
+    await conn.query('UPDATE palpites SET pontos = ? WHERE id = ?', [pontuacao, palpite.id]);
+  }
+
+  const semVencedor = Math.max(0, ...pontos) < 10;
+  const isFinal = jogo.fase === 'final';
+  const valorApostado = palpites.length * 5;
+  const premioBase = valorApostado - (valorApostado * 0.10);
+
+  if (semVencedor && !isFinal) {
+    await conn.query(
+      'UPDATE jogos SET premio_acumulado = premio_acumulado + ? WHERE fase = "final"',
+      [premioBase]
+    );
+  }
+
+  if (semVencedor && isFinal) {
+    await conn.query('UPDATE jogos SET premio_acumulado = 0 WHERE id = ?', [jogoId]);
+  }
+
+  await conn.query('UPDATE jogos SET jogo_validado = 1 WHERE id = ?', [jogoId]);
+}
+
 async function sincronizarPlacarFifa(conn, jogosLocais) {
   const locais = Array.isArray(jogosLocais) ? jogosLocais : [];
   const sincronizaveis = locais.filter((jogo) => jogo.api_jogo_id);
@@ -191,6 +226,9 @@ async function sincronizarPlacarFifa(conn, jogosLocais) {
       && Number(local.placar_fora ?? -1) === Number(golsFora ?? -1)
       && String(local.status) === statusLocal
     ) {
+      if (statusLocal === 'finalizado' && Number(local.jogo_validado || 0) !== 1) {
+        await apurarJogoFinalizado(conn, local.id);
+      }
       continue;
     }
 
@@ -200,6 +238,10 @@ async function sincronizarPlacarFifa(conn, jogosLocais) {
        WHERE id = ?`,
       [fifa.fixture_id || null, golsCasa, golsFora, statusLocal, liberado, local.id]
     );
+
+    if (statusLocal === 'finalizado') {
+      await apurarJogoFinalizado(conn, local.id);
+    }
   }
 }
 

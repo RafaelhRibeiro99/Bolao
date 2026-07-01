@@ -1,9 +1,14 @@
 function calcularPontos(jogo, palpite) {
-  const placarExato = jogo.placar_casa === palpite.palpite_casa && jogo.placar_fora === palpite.palpite_fora;
+  const placarCasa = Number(jogo.placar_casa);
+  const placarFora = Number(jogo.placar_fora);
+  const palpiteCasa = Number(palpite.palpite_casa);
+  const palpiteFora = Number(palpite.palpite_fora);
+
+  const placarExato = placarCasa === palpiteCasa && placarFora === palpiteFora;
   if (placarExato) return 10;
 
-  const resultadoJogo = Math.sign(jogo.placar_casa - jogo.placar_fora);
-  const resultadoPalpite = Math.sign(palpite.palpite_casa - palpite.palpite_fora);
+  const resultadoJogo = Math.sign(placarCasa - placarFora);
+  const resultadoPalpite = Math.sign(palpiteCasa - palpiteFora);
   if (resultadoJogo === resultadoPalpite) return 5;
 
   return 0;
